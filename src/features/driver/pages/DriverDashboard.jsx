@@ -5,6 +5,8 @@ import {
   TrendingUp, AlertTriangle, ShieldCheck, CreditCard, Banknote, Smartphone
 } from 'lucide-react';
 import { useOrderStore } from '../../../stores/useOrderStore.js';
+import { useAuthStore } from '../../../stores/useAuthStore.js';
+import { pushDriverLocation, pushOrderEvent } from '../../../services/trackingService.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
 import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
@@ -48,6 +50,7 @@ function DriverDeliveryMap({ storeLatLng, userLatLng, status }) {
 
 export function DriverDashboard() {
   const { orders, updateOrderStatus, assignDriver } = useOrderStore();
+  const driverId = useAuthStore((s) => s.userId);
   const { chats, addMessage, initializeChat } = useChatStore();
   
   const [selectedOrderId, setSelectedOrderId] = useState(null);
@@ -61,7 +64,7 @@ export function DriverDashboard() {
   // 2. Filter orders assigned to this driver ('driver-carlos') that are active
   const myActiveOrders = useMemo(() => {
     return orders.filter(o => 
-      o.driverId === 'driver-carlos' && 
+      o.driverId === driverId && 
       ['DRIVER_ASSIGNED', 'PICKED_UP'].includes(o.status)
     );
   }, [orders]);
@@ -69,7 +72,7 @@ export function DriverDashboard() {
   // 3. Filter orders assigned to this driver that are completed
   const myCompletedOrders = useMemo(() => {
     return orders.filter(o => 
-      o.driverId === 'driver-carlos' && 
+      o.driverId === driverId && 
       o.status === 'DELIVERED'
     );
   }, [orders]);
@@ -108,7 +111,8 @@ export function DriverDashboard() {
   };
 
   const handleAcceptDelivery = (orderId) => {
-    assignDriver(orderId, 'driver-carlos');
+    assignDriver(orderId, driverId);
+    pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch(() => {});
     
     // Add greeting message
     addMessage(orderId, 'driverMessages', {
@@ -129,6 +133,7 @@ export function DriverDashboard() {
   };
 
   const handlePickupPackage = (orderId) => {
+    pushOrderEvent({ orderId, eventType: 'ORDER_PICKED_UP', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch(() => {});
     updateOrderStatus(orderId, 'PICKED_UP');
     
     addMessage(orderId, 'driverMessages', {
@@ -138,6 +143,7 @@ export function DriverDashboard() {
   };
 
   const handleDeliverPackage = (orderId) => {
+    pushOrderEvent({ orderId, eventType: 'ORDER_DELIVERED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch(() => {});
     updateOrderStatus(orderId, 'DELIVERED');
     
     addMessage(orderId, 'driverMessages', {
@@ -145,6 +151,25 @@ export function DriverDashboard() {
       text: '👋 ¡He llegado a tu ubicación! Estoy afuera para entregarte el pedido. ¡Muchas gracias!'
     });
   };
+
+
+  useEffect(() => {
+    if (!selectedOrder || !['DRIVER_ASSIGNED', 'PICKED_UP'].includes(selectedOrder.status)) return;
+    const timer = setInterval(() => {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition((position) => {
+        pushDriverLocation({
+          orderId: selectedOrder.id,
+          driverId,
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          speedKmh: position.coords.speed ? position.coords.speed * 3.6 : null,
+          accuracyM: position.coords.accuracy ?? null,
+        }).catch(() => {});
+      });
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [selectedOrder?.id, selectedOrder?.status, driverId]);
 
   // Calculations for Driver Statistics
   const stats = useMemo(() => {

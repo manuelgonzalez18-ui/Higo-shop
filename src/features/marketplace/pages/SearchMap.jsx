@@ -12,7 +12,7 @@ import { MapView } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import './SearchMap.css';
 
-const CARACAS_CENTER = { lat: 10.4961, lng: -66.8983 };
+const HIGUEROTE_CENTER = { lat: 10.4817, lng: -66.0997 };
 
 export function SearchMap() {
   const [stores, setStores] = useState([]);
@@ -53,7 +53,7 @@ export function SearchMap() {
 
   const mapCenter = useMemo(() => {
     if (userLocation) return { lat: userLocation.lat, lng: userLocation.lng };
-    return CARACAS_CENTER;
+    return HIGUEROTE_CENTER;
   }, [userLocation]);
 
   const centerOnUser = () => {
