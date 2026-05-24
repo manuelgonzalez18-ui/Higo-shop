@@ -8,7 +8,7 @@ import { useLocationStore } from '../../../stores/useLocationStore.js';
 import { calculateDistance, formatDistance, estimateDeliveryTime } from '../../../services/geolocation.js';
 import { calculateDeliveryFee, formatCurrency } from '../../../services/deliveryPricing.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
-import { GoogleMapsProvider, MapView } from '../../../components/maps/MapView.jsx';
+import { MapView } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import './SearchMap.css';
 
@@ -69,7 +69,6 @@ export function SearchMap() {
   };
 
   return (
-    <GoogleMapsProvider>
       <div className="search-map-page">
         {/* Top Search Bar Widget */}
         <div className="search-map-header">
@@ -228,6 +227,5 @@ export function SearchMap() {
           </div>
         </motion.div>
       </div>
-    </GoogleMapsProvider>
   );
 }

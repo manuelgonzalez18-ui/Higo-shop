@@ -12,7 +12,7 @@ import { formatCurrency } from '../../../services/deliveryPricing.js';
 import { formatDurationMin, bearingBetween } from '../../../services/geolocation.js';
 import { useDirections } from '../../../hooks/useDirections.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
-import { GoogleMapsProvider, MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
+import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
 import './OrderDetailPage.css';
@@ -95,14 +95,6 @@ function TrackingMap({
 }
 
 export function OrderDetailPage() {
-  return (
-    <GoogleMapsProvider>
-      <OrderDetailPageInner />
-    </GoogleMapsProvider>
-  );
-}
-
-function OrderDetailPageInner() {
   const { orderId } = useParams();
   const navigate = useNavigate();
 

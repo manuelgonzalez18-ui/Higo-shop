@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell.jsx';
+import { GoogleMapsProvider } from './components/maps/MapView.jsx';
 import { MarketplaceHome } from './features/marketplace/pages/MarketplaceHome.jsx';
 import { SearchMap } from './features/marketplace/pages/SearchMap.jsx';
 import { StoreView } from './features/marketplace/pages/StoreView.jsx';
@@ -21,17 +22,19 @@ function HomeSelector() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route path="/" element={<HomeSelector />} />
-        <Route path="/search" element={<SearchMap />} />
-        <Route path="/store/:storeId" element={<StoreView />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/checkout/:storeId" element={<CheckoutPage />} />
-        <Route path="/orders" element={<OrdersPage />} />
-        <Route path="/orders/:orderId" element={<OrderDetailPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-      </Route>
-    </Routes>
+    <GoogleMapsProvider>
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route path="/" element={<HomeSelector />} />
+          <Route path="/search" element={<SearchMap />} />
+          <Route path="/store/:storeId" element={<StoreView />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout/:storeId" element={<CheckoutPage />} />
+          <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
+      </Routes>
+    </GoogleMapsProvider>
   );
 }

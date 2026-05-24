@@ -16,7 +16,7 @@ import { useDeliveryFee } from '../../../hooks/useDeliveryFee.js';
 import { useDirections } from '../../../hooks/useDirections.js';
 import { formatCurrency, calculateChange } from '../../../services/deliveryPricing.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
-import { GoogleMapsProvider, MapView } from '../../../components/maps/MapView.jsx';
+import { MapView } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
 import { AddressAutocomplete } from '../../../components/maps/AddressAutocomplete.jsx';
@@ -38,14 +38,6 @@ function CheckoutMap({ origin, destination, path }) {
 }
 
 export function CheckoutPage() {
-  return (
-    <GoogleMapsProvider>
-      <CheckoutPageInner />
-    </GoogleMapsProvider>
-  );
-}
-
-function CheckoutPageInner() {
   const { storeId } = useParams();
   const navigate = useNavigate();
 
