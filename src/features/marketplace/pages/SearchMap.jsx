@@ -5,7 +5,8 @@ import { Search, Navigation, ArrowLeft } from 'lucide-react';
 import { InfoWindow } from '@vis.gl/react-google-maps';
 import { fetchStores } from '../../../services/storeService.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
-import { calculateDistance, formatDistance } from '../../../services/geolocation.js';
+import { calculateDistance, formatDistance, estimateDeliveryTime } from '../../../services/geolocation.js';
+import { calculateDeliveryFee, formatCurrency } from '../../../services/deliveryPricing.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
 import { GoogleMapsProvider, MapView } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
@@ -106,21 +107,39 @@ export function SearchMap() {
               />
             ))}
 
-            {selectedStore && (
-              <InfoWindow
-                position={{ lat: selectedStore.latitude, lng: selectedStore.longitude }}
-                onCloseClick={() => setSelectedStore(null)}
-                pixelOffset={[0, -40]}
-              >
-                <div className="map-popup-content">
-                  <div className="map-popup-name">{selectedStore.name}</div>
-                  <div className="map-popup-meta">★ {selectedStore.rating.toFixed(1)} • {selectedStore.deliveryTime}</div>
-                  <Link to={`/store/${selectedStore.id}`} className="map-popup-link">
-                    Pedir ahora →
-                  </Link>
-                </div>
-              </InfoWindow>
-            )}
+            {selectedStore && (() => {
+              const distKm = userLocation
+                ? calculateDistance(userLocation.lat, userLocation.lng, selectedStore.latitude, selectedStore.longitude)
+                : null;
+              const previewFee = distKm != null ? calculateDeliveryFee(distKm) : null;
+              const previewEta = distKm != null ? estimateDeliveryTime(distKm) : null;
+              return (
+                <InfoWindow
+                  position={{ lat: selectedStore.latitude, lng: selectedStore.longitude }}
+                  onCloseClick={() => setSelectedStore(null)}
+                  pixelOffset={[0, -40]}
+                >
+                  <div className="map-popup-content">
+                    <div className="map-popup-name">{selectedStore.name}</div>
+                    <div className="map-popup-meta">★ {selectedStore.rating.toFixed(1)} • {selectedStore.deliveryTime}</div>
+                    {distKm != null && (
+                      <div className="map-popup-delivery">
+                        <span className="map-popup-chip">
+                          <Navigation size={11} /> {formatDistance(distKm)}
+                        </span>
+                        <span className="map-popup-chip map-popup-chip--fee">
+                          🛵 {formatCurrency(previewFee)}
+                        </span>
+                        <span className="map-popup-chip">⏱ {previewEta}</span>
+                      </div>
+                    )}
+                    <Link to={`/store/${selectedStore.id}`} className="map-popup-link">
+                      Pedir ahora →
+                    </Link>
+                  </div>
+                </InfoWindow>
+              );
+            })()}
           </MapView>
 
           <button

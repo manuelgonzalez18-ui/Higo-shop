@@ -342,6 +342,11 @@ ul, ol {
   50% { transform: translateY(-6px); }
 }
 
+@keyframes higo-map-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
 /* Google Places Autocomplete dropdown — match dark theme */
 .pac-container {
   background: var(--higo-white);
