@@ -17,6 +17,17 @@ export class RouteErrorBoundary extends Component {
     if (typeof console !== 'undefined') {
       console.error('Route load failed:', error);
     }
+
+    const msg = String(error?.message || '');
+    const isChunkError = msg.includes('Failed to fetch dynamically imported module') || msg.includes('Loading chunk');
+    if (!isChunkError || typeof window === 'undefined') return;
+
+    const key = 'higo-shop:chunk-reload-once';
+    const alreadyReloaded = window.sessionStorage.getItem(key) === '1';
+    if (!alreadyReloaded) {
+      window.sessionStorage.setItem(key, '1');
+      window.location.reload();
+    }
   }
 
   handleReload = () => {
