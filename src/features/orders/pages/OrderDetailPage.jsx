@@ -9,9 +9,10 @@ import { useOrderStore } from '../../../stores/useOrderStore.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { fetchStoreById } from '../../../services/storeService.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
+import { formatDurationMin, bearingBetween } from '../../../services/geolocation.js';
 import { useDirections } from '../../../hooks/useDirections.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
-import { GoogleMapsProvider, MapView } from '../../../components/maps/MapView.jsx';
+import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
 import './OrderDetailPage.css';
@@ -42,39 +43,15 @@ function interpolateAlongPath(path, ratio) {
   };
 }
 
-function TrackingMap({ order, currentLeg, legStep }) {
-  const storeLatLng = useMemo(() => ({
-    lat: order.storeLocation.lat,
-    lng: order.storeLocation.lng,
-  }), [order.storeLocation.lat, order.storeLocation.lng]);
-
-  const userLatLng = useMemo(() => ({
-    lat: order.userLocation.lat,
-    lng: order.userLocation.lng,
-  }), [order.userLocation.lat, order.userLocation.lng]);
-
-  const driverStartLatLng = useMemo(() => ({
-    lat: storeLatLng.lat + 0.006,
-    lng: storeLatLng.lng - 0.008,
-  }), [storeLatLng.lat, storeLatLng.lng]);
-
-  // Active leg origin/destination
-  const legOrigin = currentLeg === 'to_store' ? driverStartLatLng : storeLatLng;
-  const legDest = currentLeg === 'to_store' ? storeLatLng : userLatLng;
-
-  const { path: legPath } = useDirections(legOrigin, legDest);
-  const { path: fullDeliveryPath } = useDirections(storeLatLng, userLatLng);
-
-  // Active leg progress
-  const totalSteps = currentLeg === 'to_store' ? 10 : 12;
-  const ratio = Math.min(1, legStep / totalSteps);
-  const driverPos = useMemo(() => {
-    if (currentLeg === 'delivered') return userLatLng;
-    if (currentLeg === 'at_store') return storeLatLng;
-    if (currentLeg === 'none') return driverStartLatLng;
-    return interpolateAlongPath(legPath || [legOrigin, legDest], ratio) || driverStartLatLng;
-  }, [currentLeg, legPath, ratio, userLatLng, storeLatLng, driverStartLatLng, legOrigin, legDest]);
-
+function TrackingMap({
+  storeLatLng,
+  userLatLng,
+  driverPos,
+  driverBearing,
+  currentLeg,
+  legPath,
+  fullDeliveryPath,
+}) {
   const mapCenter = useMemo(() => ({
     lat: (userLatLng.lat + storeLatLng.lat) / 2,
     lng: (userLatLng.lng + storeLatLng.lng) / 2,
@@ -82,6 +59,12 @@ function TrackingMap({ order, currentLeg, legStep }) {
 
   return (
     <MapView center={mapCenter} zoom={14}>
+      <AutoFitBounds
+        points={[storeLatLng, userLatLng, driverPos]}
+        padding={100}
+        fitKey={currentLeg}
+      />
+
       <EmojiMarker position={userLatLng} preset="user" zIndex={20} />
       <EmojiMarker position={storeLatLng} preset="store" zIndex={20} />
 
@@ -99,7 +82,13 @@ function TrackingMap({ order, currentLeg, legStep }) {
       )}
 
       {driverPos && (
-        <EmojiMarker position={driverPos} preset="driver" bounce zIndex={100} />
+        <EmojiMarker
+          position={driverPos}
+          preset="driver"
+          bounce
+          zIndex={100}
+          bearing={driverBearing}
+        />
       )}
     </MapView>
   );
@@ -123,6 +112,55 @@ export function OrderDetailPage() {
 
   const [currentLeg, setCurrentLeg] = useState('none');
   const [legStep, setLegStep] = useState(0);
+
+  // Geometry derived from order (safe even before order exists — guarded).
+  const storeLatLng = useMemo(() => order ? ({
+    lat: order.storeLocation.lat, lng: order.storeLocation.lng,
+  }) : null, [order?.storeLocation.lat, order?.storeLocation.lng]);
+  const userLatLng = useMemo(() => order ? ({
+    lat: order.userLocation.lat, lng: order.userLocation.lng,
+  }) : null, [order?.userLocation.lat, order?.userLocation.lng]);
+  const driverStartLatLng = useMemo(() => storeLatLng ? ({
+    lat: storeLatLng.lat + 0.006, lng: storeLatLng.lng - 0.008,
+  }) : null, [storeLatLng?.lat, storeLatLng?.lng]);
+
+  const legOrigin = currentLeg === 'to_store' ? driverStartLatLng : storeLatLng;
+  const legDest = currentLeg === 'to_store' ? storeLatLng : userLatLng;
+
+  const { path: legPath, duration: legDurationSec } = useDirections(legOrigin, legDest);
+  const { path: fullDeliveryPath } = useDirections(storeLatLng, userLatLng);
+
+  const totalSteps = currentLeg === 'to_store' ? 10 : 12;
+  const ratio = Math.min(1, legStep / totalSteps);
+  const driverPos = useMemo(() => {
+    if (!storeLatLng || !userLatLng) return null;
+    if (currentLeg === 'delivered') return userLatLng;
+    if (currentLeg === 'at_store') return storeLatLng;
+    if (currentLeg === 'none') return driverStartLatLng;
+    return interpolateAlongPath(legPath || [legOrigin, legDest], ratio) || driverStartLatLng;
+  }, [currentLeg, legPath, ratio, userLatLng, storeLatLng, driverStartLatLng, legOrigin, legDest]);
+
+  // Bearing derived from the next path segment so the driver arrow looks
+  // forward instead of lagging behind. Falls back to previous→current when
+  // we're at the end of the path.
+  const driverBearing = useMemo(() => {
+    if (!driverPos) return null;
+    if (currentLeg !== 'to_store' && currentLeg !== 'to_client') return null;
+    const path = legPath;
+    if (!path || path.length < 2) return bearingBetween(legOrigin, legDest);
+    const target = ratio * (path.length - 1);
+    const idx = Math.min(path.length - 2, Math.floor(target));
+    return bearingBetween(path[idx], path[idx + 1]);
+  }, [driverPos, currentLeg, legPath, ratio, legOrigin, legDest]);
+
+  // Live ETA = remaining fraction of Google's total leg duration.
+  const remainingEtaText = useMemo(() => {
+    if (legDurationSec == null) return null;
+    if (currentLeg === 'to_store' || currentLeg === 'to_client') {
+      return formatDurationMin(legDurationSec * (1 - ratio));
+    }
+    return null;
+  }, [legDurationSec, ratio, currentLeg]);
 
   useEffect(() => {
     if (!order) return;
@@ -328,7 +366,6 @@ export function OrderDetailPage() {
   const currentStepIndex = getStepIndex(order.status);
 
   return (
-    <GoogleMapsProvider>
       <div className="order-detail-page">
         <div className="order-detail-header">
           <button className="back-btn" onClick={() => navigate('/orders')}>
@@ -342,15 +379,23 @@ export function OrderDetailPage() {
 
         {/* MAP TRACKING VIEW */}
         <div className="tracking-map-container">
-          <TrackingMap order={order} currentLeg={currentLeg} legStep={legStep} />
+          <TrackingMap
+            storeLatLng={storeLatLng}
+            userLatLng={userLatLng}
+            driverPos={driverPos}
+            driverBearing={driverBearing}
+            currentLeg={currentLeg}
+            legPath={legPath}
+            fullDeliveryPath={fullDeliveryPath}
+          />
 
           {currentLeg !== 'none' && (
             <div className="floating-driver-eta">
               <Clock size={14} className="spinning-icon" />
               <span>
-                {currentLeg === 'to_store' && 'Repartidor en camino a la tienda...'}
+                {currentLeg === 'to_store' && `Repartidor en camino a la tienda${remainingEtaText ? ` · ${remainingEtaText}` : '...'}`}
                 {currentLeg === 'at_store' && 'Repartidor en tienda verificando pedido...'}
-                {currentLeg === 'to_client' && '¡Pedido en camino a tu dirección!'}
+                {currentLeg === 'to_client' && `¡Pedido en camino${remainingEtaText ? ` · llega en ${remainingEtaText}` : ' a tu dirección!'}`}
                 {currentLeg === 'delivered' && '¡Entregado! Disfruta tu compra'}
               </span>
             </div>
@@ -495,6 +540,5 @@ export function OrderDetailPage() {
           </div>
         </div>
       </div>
-    </GoogleMapsProvider>
   );
 }

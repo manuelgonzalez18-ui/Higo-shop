@@ -4,8 +4,10 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Store, Truck, Phone, Building2,
   CreditCard, Banknote, Smartphone, Copy, Check,
-  Navigation, Clock, ShoppingBag, Send, Edit3
+  Navigation, Clock, ShoppingBag, Send, Edit3, LocateFixed
 } from 'lucide-react';
+import { useMapsLibrary } from '@vis.gl/react-google-maps';
+import { getCurrentPosition } from '../../../services/geolocation.js';
 import { fetchStoreById } from '../../../services/storeService.js';
 import { useCartStore } from '../../../stores/useCartStore.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
@@ -14,14 +16,13 @@ import { useDeliveryFee } from '../../../hooks/useDeliveryFee.js';
 import { useDirections } from '../../../hooks/useDirections.js';
 import { formatCurrency, calculateChange } from '../../../services/deliveryPricing.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
-import { GoogleMapsProvider, MapView } from '../../../components/maps/MapView.jsx';
+import { MapView } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
 import { AddressAutocomplete } from '../../../components/maps/AddressAutocomplete.jsx';
 import './CheckoutPage.css';
 
-function CheckoutMap({ origin, destination }) {
-  const { path } = useDirections(origin, destination);
+function CheckoutMap({ origin, destination, path }) {
   const center = useMemo(() => ({
     lat: (origin.lat + destination.lat) / 2,
     lng: (origin.lng + destination.lng) / 2,
@@ -47,7 +48,18 @@ export function CheckoutPage() {
   const { carts, clearCart } = useCartStore();
   const { userLocation, deliveryAddress, setUserLocation, setDeliveryAddress } = useLocationStore();
   const { createOrder } = useOrderStore();
-  const { distance, distanceText, fee, feeText, estimatedTime } = useDeliveryFee(store?.latitude, store?.longitude);
+
+  const directionsOrigin = userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null;
+  const directionsDest = store ? { lat: store.latitude, lng: store.longitude } : null;
+  const { path: routePath, distance: liveDistM, duration: liveDurS } = useDirections(
+    directionsOrigin,
+    directionsDest,
+  );
+  const { distance, distanceText, fee, feeText, estimatedTime } = useDeliveryFee(
+    store?.latitude,
+    store?.longitude,
+    { liveDistanceMeters: liveDistM, liveDurationSeconds: liveDurS },
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -88,6 +100,32 @@ export function CheckoutPage() {
     setDeliveryAddress(place.address);
     setUserLocation({ lat: place.lat, lng: place.lng });
     setIsEditingAddress(false);
+  };
+
+  const geocodingLib = useMapsLibrary('geocoding');
+  const [isLocatingMe, setIsLocatingMe] = useState(false);
+
+  const handleUseMyLocation = async () => {
+    setIsLocatingMe(true);
+    try {
+      const pos = await getCurrentPosition();
+      setUserLocation(pos);
+      if (geocodingLib) {
+        const geocoder = new geocodingLib.Geocoder();
+        geocoder.geocode({ location: pos }, (results, status) => {
+          if (status === 'OK' && results[0]) {
+            setDeliveryAddress(results[0].formatted_address);
+          }
+          setIsLocatingMe(false);
+          setIsEditingAddress(false);
+        });
+      } else {
+        setIsLocatingMe(false);
+        setIsEditingAddress(false);
+      }
+    } catch (err) {
+      setIsLocatingMe(false);
+    }
   };
 
   const handleConfirmOrder = () => {
@@ -146,8 +184,7 @@ export function CheckoutPage() {
   }
 
   return (
-    <GoogleMapsProvider>
-      <div className="checkout-page">
+    <div className="checkout-page">
         <div className="checkout-header">
           <button className="checkout-header__back" onClick={() => navigate(-1)}>
             <ArrowLeft size={20} />
@@ -178,6 +215,15 @@ export function CheckoutPage() {
                   autoFocus
                 />
                 <button
+                  className="address-use-location"
+                  onClick={handleUseMyLocation}
+                  disabled={isLocatingMe}
+                  type="button"
+                >
+                  <LocateFixed size={14} className={isLocatingMe ? 'spinning-icon' : ''} />
+                  {isLocatingMe ? 'Obteniendo...' : 'Usar mi ubicación'}
+                </button>
+                <button
                   className="address-edit-cancel"
                   onClick={() => setIsEditingAddress(false)}
                   type="button"
@@ -196,6 +242,7 @@ export function CheckoutPage() {
               <CheckoutMap
                 origin={{ lat: userLocation.lat, lng: userLocation.lng }}
                 destination={{ lat: store.latitude, lng: store.longitude }}
+                path={routePath}
               />
             </div>
             <div className="distance-info" style={{ marginTop: 'var(--space-2)' }}>
@@ -386,7 +433,6 @@ export function CheckoutPage() {
             )}
           </motion.button>
         </div>
-      </div>
-    </GoogleMapsProvider>
+    </div>
   );
 }

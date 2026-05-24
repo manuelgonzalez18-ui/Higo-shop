@@ -11,7 +11,7 @@ export const GOOGLE_MAPS_API_KEY =
 // warning; the raster style array below is applied as a fallback.
 export const GOOGLE_MAPS_ID = import.meta.env.VITE_GOOGLE_MAPS_ID || undefined;
 
-export const GOOGLE_MAPS_LIBRARIES = ['places', 'routes', 'marker'];
+export const GOOGLE_MAPS_LIBRARIES = ['places', 'routes', 'marker', 'geocoding'];
 
 // Dark theme styles — only applied when mapId is absent (Cloud styling
 // supersedes inline styles on vector maps).
