@@ -7,7 +7,44 @@ import {
 import { useOrderStore } from '../../../stores/useOrderStore.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
+import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
+import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
+import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
+import { useDirections } from '../../../hooks/useDirections.js';
+import { formatDurationMin } from '../../../services/geolocation.js';
 import './DriverDashboard.css';
+
+function DriverDeliveryMap({ storeLatLng, userLatLng, status }) {
+  const { path, duration } = useDirections(storeLatLng, userLatLng);
+  const mapCenter = useMemo(() => ({
+    lat: (storeLatLng.lat + userLatLng.lat) / 2,
+    lng: (storeLatLng.lng + userLatLng.lng) / 2,
+  }), [storeLatLng.lat, storeLatLng.lng, userLatLng.lat, userLatLng.lng]);
+
+  // Highlight different leg colors depending on driver progress.
+  const isEnRoute = status === 'PICKED_UP';
+  const routeColor = isEnRoute ? '#10B981' : '#3B82F6';
+
+  return (
+    <div className="driver-mini-map">
+      <MapView center={mapCenter} zoom={13}>
+        <AutoFitBounds
+          points={[storeLatLng, userLatLng]}
+          padding={50}
+          fitKey={`${storeLatLng.lat},${userLatLng.lat}`}
+        />
+        <EmojiMarker position={storeLatLng} preset="store" zIndex={20} />
+        <EmojiMarker position={userLatLng} preset="user" zIndex={20} />
+        {path && <RoutePolyline path={path} color={routeColor} weight={4} opacity={0.9} />}
+      </MapView>
+      {duration != null && (
+        <div className="driver-mini-map__eta">
+          🛵 {formatDurationMin(duration)} en moto
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function DriverDashboard() {
   const { orders, updateOrderStatus, assignDriver } = useOrderStore();
@@ -153,6 +190,14 @@ export function DriverDashboard() {
                   {selectedOrder.status}
                 </span>
               </div>
+
+              {selectedOrder.storeLocation && selectedOrder.userLocation && (
+                <DriverDeliveryMap
+                  storeLatLng={selectedOrder.storeLocation}
+                  userLatLng={selectedOrder.userLocation}
+                  status={selectedOrder.status}
+                />
+              )}
 
               {/* ROUTE INFO */}
               <div className="delivery-route-block">
