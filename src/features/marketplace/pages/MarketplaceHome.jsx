@@ -13,10 +13,17 @@ import {
 } from 'lucide-react';
 import { fetchStores } from '../../../services/storeService.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
+import { useOrderStore } from '../../../stores/useOrderStore.js';
 import { calculateDistance, formatDistance } from '../../../services/geolocation.js';
 import { AddressPickerSheet } from '../../../components/address/AddressPickerSheet.jsx';
+import { NotificationsPopover } from '../components/NotificationsPopover.jsx';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
 import './MarketplaceHome.css';
+
+const ACTIVE_ORDER_STATUSES = [
+  'PENDING_PAYMENT', 'PAYMENT_VERIFIED', 'PREPARING',
+  'READY_TO_DISPATCH', 'DRIVER_ASSIGNED', 'PICKED_UP',
+];
 
 const CATEGORIES = [
   { id: 'all', label: 'Todos', emoji: '🏪' },
@@ -46,7 +53,13 @@ export function MarketplaceHome() {
   const [stores, setStores] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddressPickerOpen, setIsAddressPickerOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { userLocation, deliveryAddress, setUserLocation, setDeliveryAddress } = useLocationStore();
+  const orders = useOrderStore((s) => s.orders);
+  const activeOrders = useMemo(
+    () => orders.filter((o) => ACTIVE_ORDER_STATUSES.includes(o.status)),
+    [orders],
+  );
 
   // Load stores from Supabase (falls back to mockStores automatically)
   useEffect(() => {
@@ -106,9 +119,22 @@ export function MarketplaceHome() {
             </div>
           </button>
           <div className="hero-actions">
-            <button className="hero-notification-btn">
+            <button
+              className="hero-notification-btn"
+              onClick={() => setIsNotificationsOpen((v) => !v)}
+              type="button"
+              aria-label="Notificaciones"
+            >
               <Bell size={20} />
+              {activeOrders.length > 0 && (
+                <span className="hero-notification-badge">{activeOrders.length}</span>
+              )}
             </button>
+            <NotificationsPopover
+              isOpen={isNotificationsOpen}
+              orders={activeOrders}
+              onClose={() => setIsNotificationsOpen(false)}
+            />
           </div>
         </div>
 
