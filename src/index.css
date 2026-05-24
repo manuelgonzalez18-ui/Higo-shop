@@ -4,14 +4,14 @@
 
 /* --- CSS Custom Properties --- */
 :root {
-  /* Brand Colors */
-  --higo-blue: #2563EB;
-  --higo-blue-light: #3B82F6;
-  --higo-blue-dark: #1D4ED8;
-  --higo-blue-darker: #1E40AF;
-  --higo-blue-50: #EFF6FF;
-  --higo-blue-100: #DBEAFE;
-  --higo-blue-200: #BFDBFE;
+  /* Brand Colors (Aligned with HigoApp.com) */
+  --higo-blue: #3B82F6;           /* Brand Primary Electric Blue */
+  --higo-blue-light: #60A5FA;     /* Brand Sky Blue Highlight */
+  --higo-blue-dark: #2563EB;      /* Royal Blue */
+  --higo-blue-darker: #1D4ED8;    /* Dark Blue */
+  --higo-blue-50: #F0F7FF;        /* Light blue offset */
+  --higo-blue-100: #E0EFFF;
+  --higo-blue-200: #C2E0FF;
 
   /* Neutrals */
   --higo-gray-900: #0F172A;
