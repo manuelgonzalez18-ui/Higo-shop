@@ -134,6 +134,43 @@
   color: var(--higo-gray-800);
 }
 
+.address-use-location {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--higo-blue-100, rgba(59, 130, 246, 0.12));
+  color: var(--higo-blue);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.address-use-location:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.22);
+}
+
+.address-use-location:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.address-use-location:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.address-use-location .spinning-icon {
+  animation: higo-spin 0.9s linear infinite;
+}
+
+@keyframes higo-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Map */
 .checkout-map {
   height: 180px;

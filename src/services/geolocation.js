@@ -31,6 +31,21 @@ export function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 /**
+ * Compute compass bearing (0..360°, clockwise from north) from point a to b.
+ * Used to rotate the driver marker so it faces the direction of travel.
+ */
+export function bearingBetween(a, b) {
+  if (!a || !b) return null;
+  const φ1 = toRad(a.lat);
+  const φ2 = toRad(b.lat);
+  const Δλ = toRad(b.lng - a.lng);
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  const θ = Math.atan2(y, x);
+  return (θ * 180 / Math.PI + 360) % 360;
+}
+
+/**
  * Get the current position from the browser Geolocation API.
  * @param {object} [options] - PositionOptions for getCurrentPosition
  * @returns {Promise<{lat: number, lng: number}>}

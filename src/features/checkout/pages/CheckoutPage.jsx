@@ -4,8 +4,10 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Store, Truck, Phone, Building2,
   CreditCard, Banknote, Smartphone, Copy, Check,
-  Navigation, Clock, ShoppingBag, Send, Edit3
+  Navigation, Clock, ShoppingBag, Send, Edit3, LocateFixed
 } from 'lucide-react';
+import { useMapsLibrary } from '@vis.gl/react-google-maps';
+import { getCurrentPosition } from '../../../services/geolocation.js';
 import { fetchStoreById } from '../../../services/storeService.js';
 import { useCartStore } from '../../../stores/useCartStore.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
@@ -108,6 +110,32 @@ function CheckoutPageInner() {
     setIsEditingAddress(false);
   };
 
+  const geocodingLib = useMapsLibrary('geocoding');
+  const [isLocatingMe, setIsLocatingMe] = useState(false);
+
+  const handleUseMyLocation = async () => {
+    setIsLocatingMe(true);
+    try {
+      const pos = await getCurrentPosition();
+      setUserLocation(pos);
+      if (geocodingLib) {
+        const geocoder = new geocodingLib.Geocoder();
+        geocoder.geocode({ location: pos }, (results, status) => {
+          if (status === 'OK' && results[0]) {
+            setDeliveryAddress(results[0].formatted_address);
+          }
+          setIsLocatingMe(false);
+          setIsEditingAddress(false);
+        });
+      } else {
+        setIsLocatingMe(false);
+        setIsEditingAddress(false);
+      }
+    } catch (err) {
+      setIsLocatingMe(false);
+    }
+  };
+
   const handleConfirmOrder = () => {
     if (!store) return;
     setIsSubmitting(true);
@@ -194,6 +222,15 @@ function CheckoutPageInner() {
                   className="address-autocomplete-input"
                   autoFocus
                 />
+                <button
+                  className="address-use-location"
+                  onClick={handleUseMyLocation}
+                  disabled={isLocatingMe}
+                  type="button"
+                >
+                  <LocateFixed size={14} className={isLocatingMe ? 'spinning-icon' : ''} />
+                  {isLocatingMe ? 'Obteniendo...' : 'Usar mi ubicación'}
+                </button>
                 <button
                   className="address-edit-cancel"
                   onClick={() => setIsEditingAddress(false)}

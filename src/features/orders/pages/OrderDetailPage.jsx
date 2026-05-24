@@ -9,10 +9,10 @@ import { useOrderStore } from '../../../stores/useOrderStore.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { fetchStoreById } from '../../../services/storeService.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
-import { formatDurationMin } from '../../../services/geolocation.js';
+import { formatDurationMin, bearingBetween } from '../../../services/geolocation.js';
 import { useDirections } from '../../../hooks/useDirections.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
-import { GoogleMapsProvider, MapView } from '../../../components/maps/MapView.jsx';
+import { GoogleMapsProvider, MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
 import './OrderDetailPage.css';
@@ -47,6 +47,7 @@ function TrackingMap({
   storeLatLng,
   userLatLng,
   driverPos,
+  driverBearing,
   currentLeg,
   legPath,
   fullDeliveryPath,
@@ -58,6 +59,12 @@ function TrackingMap({
 
   return (
     <MapView center={mapCenter} zoom={14}>
+      <AutoFitBounds
+        points={[storeLatLng, userLatLng, driverPos]}
+        padding={100}
+        fitKey={currentLeg}
+      />
+
       <EmojiMarker position={userLatLng} preset="user" zIndex={20} />
       <EmojiMarker position={storeLatLng} preset="store" zIndex={20} />
 
@@ -75,7 +82,13 @@ function TrackingMap({
       )}
 
       {driverPos && (
-        <EmojiMarker position={driverPos} preset="driver" bounce zIndex={100} />
+        <EmojiMarker
+          position={driverPos}
+          preset="driver"
+          bounce
+          zIndex={100}
+          bearing={driverBearing}
+        />
       )}
     </MapView>
   );
@@ -134,6 +147,19 @@ function OrderDetailPageInner() {
     if (currentLeg === 'none') return driverStartLatLng;
     return interpolateAlongPath(legPath || [legOrigin, legDest], ratio) || driverStartLatLng;
   }, [currentLeg, legPath, ratio, userLatLng, storeLatLng, driverStartLatLng, legOrigin, legDest]);
+
+  // Bearing derived from the next path segment so the driver arrow looks
+  // forward instead of lagging behind. Falls back to previous→current when
+  // we're at the end of the path.
+  const driverBearing = useMemo(() => {
+    if (!driverPos) return null;
+    if (currentLeg !== 'to_store' && currentLeg !== 'to_client') return null;
+    const path = legPath;
+    if (!path || path.length < 2) return bearingBetween(legOrigin, legDest);
+    const target = ratio * (path.length - 1);
+    const idx = Math.min(path.length - 2, Math.floor(target));
+    return bearingBetween(path[idx], path[idx + 1]);
+  }, [driverPos, currentLeg, legPath, ratio, legOrigin, legDest]);
 
   // Live ETA = remaining fraction of Google's total leg duration.
   const remainingEtaText = useMemo(() => {
@@ -365,6 +391,7 @@ function OrderDetailPageInner() {
             storeLatLng={storeLatLng}
             userLatLng={userLatLng}
             driverPos={driverPos}
+            driverBearing={driverBearing}
             currentLeg={currentLeg}
             legPath={legPath}
             fullDeliveryPath={fullDeliveryPath}
