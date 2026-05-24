@@ -75,7 +75,7 @@ export function MarketplaceHome() {
     }
 
     // Sort: open first, then by distance
-    stores.sort((a, b) => {
+    list.sort((a, b) => {
       if (a.isOpen !== b.isOpen) return a.isOpen ? -1 : 1;
       if (userLocation) {
         const distA = calculateDistance(userLocation.lat, userLocation.lng, a.latitude, a.longitude);
@@ -85,8 +85,8 @@ export function MarketplaceHome() {
       return 0;
     });
 
-    return stores;
-  }, [searchQuery, activeCategory, userLocation]);
+    return list;
+  }, [stores, searchQuery, activeCategory, userLocation]);
 
   return (
     <div className="marketplace-home">
