@@ -1,0 +1,237 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+# Si entra un nuevo push mientras el deploy anterior sigue corriendo,
+# cancelamos el viejo. Evita stacks de runs colgados (clásico con lftp
+# trabado por antivirus de Hostinger lockeando archivos).
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: Build Project
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+          VITE_FCM_VAPID_KEY: ${{ secrets.VITE_FCM_VAPID_KEY }}
+          # Anexo C — motor de mapa (google|mapbox) + token Mapbox.
+          # Default 'google' si el secret no esta seteado. Para volver a
+          # intentar la cutover a Mapbox: cargar VITE_MAP_ENGINE='mapbox'
+          # y VITE_MAPBOX_TOKEN con pk.* (>=60 chars) en GitHub Secrets.
+          # La guarda mas abajo aborta el build si el token falta o esta
+          # malformado.
+          VITE_MAP_ENGINE: ${{ secrets.VITE_MAP_ENGINE || 'google' }}
+          VITE_MAPBOX_TOKEN: ${{ secrets.VITE_MAPBOX_TOKEN }}
+        run: |
+          echo "=== ENV DIAGNOSTIC (lengths only, no values) ==="
+          echo "VITE_SUPABASE_URL length: ${#VITE_SUPABASE_URL}"
+          echo "VITE_SUPABASE_ANON_KEY length: ${#VITE_SUPABASE_ANON_KEY}"
+          echo "VITE_GOOGLE_MAPS_API_KEY length: ${#VITE_GOOGLE_MAPS_API_KEY}"
+          echo "VITE_GEMINI_API_KEY length: ${#VITE_GEMINI_API_KEY}"
+          echo "VITE_FIREBASE_API_KEY length: ${#VITE_FIREBASE_API_KEY}"
+          echo "VITE_FIREBASE_PROJECT_ID length: ${#VITE_FIREBASE_PROJECT_ID}"
+          echo "================================================="
+          if [[ ! "$VITE_GOOGLE_MAPS_API_KEY" =~ ^AIza[0-9A-Za-z_-]{35}$ ]]; then
+            echo "::error::VITE_GOOGLE_MAPS_API_KEY no tiene formato valido de Google API key (esperado: AIza + 35 chars alfanumericos/_-, total 39; recibido: ${#VITE_GOOGLE_MAPS_API_KEY} chars). Revisa el secret en GitHub: Settings > Secrets and variables > Actions. Causa comun: espacios, saltos de linea o comillas al pegar."
+            exit 1
+          fi
+          # Supabase env vars: warning si faltan/estan rotas, pero NO
+          # exit 1. supabase.js tiene FALLBACK hardcoded (hotfix
+          # 2026-05-22) que arranca el bundle con la URL/anon-key
+          # publicas si las env vars estan vacias. Mejor un deploy
+          # funcionando con fallback que un deploy bloqueado y prod
+          # rota.
+          if [[ ! "$VITE_SUPABASE_URL" =~ ^https://[a-z0-9-]+\.supabase\.co$ ]]; then
+            echo "::warning::VITE_SUPABASE_URL no tiene formato valido (recibido len=${#VITE_SUPABASE_URL}). El bundle usara FALLBACK_URL de supabase.js. Revisa GitHub Secrets cuando puedas."
+          fi
+          if [[ "${#VITE_SUPABASE_ANON_KEY}" -lt 20 ]]; then
+            echo "::warning::VITE_SUPABASE_ANON_KEY es sospechosamente corto (len=${#VITE_SUPABASE_ANON_KEY}). El bundle usara FALLBACK_KEY de supabase.js. Revisa GitHub Secrets cuando puedas."
+          fi
+          # Mapbox: si el motor esta seteado a 'mapbox', exigir token con
+          # formato pk.* y longitud razonable. Sin esto, un secret vacio o
+          # malformado se baked-in como '' al bundle y mapbox-gl dibuja
+          # solo los controles DOM sin tiles (incidente 2026-05-22).
+          # Si el motor es 'google' no validamos — el token puede no estar.
+          echo "VITE_MAP_ENGINE: $VITE_MAP_ENGINE"
+          echo "VITE_MAPBOX_TOKEN length: ${#VITE_MAPBOX_TOKEN}"
+          if [[ "$VITE_MAP_ENGINE" == "mapbox" ]]; then
+            if [[ ! "$VITE_MAPBOX_TOKEN" =~ ^pk\.[A-Za-z0-9_-]+$ ]]; then
+              echo "::error::VITE_MAP_ENGINE=mapbox pero VITE_MAPBOX_TOKEN no tiene formato valido (esperado: pk.<base64url>; recibido len=${#VITE_MAPBOX_TOKEN}). El bundle saldria con tiles en blanco. Carga el secret en GitHub > Settings > Secrets and variables > Actions o cambia VITE_MAP_ENGINE a 'google'."
+              exit 1
+            fi
+            if [[ "${#VITE_MAPBOX_TOKEN}" -lt 60 ]]; then
+              echo "::error::VITE_MAPBOX_TOKEN es sospechosamente corto (len=${#VITE_MAPBOX_TOKEN}, esperado >= 60 chars). Probable token truncado al pegar."
+              exit 1
+            fi
+          fi
+          npm run build
+
+      # lftp con xfer:clobber on + ftp:use-allo off para que suba cada
+      # archivo con su nombre final y evite el patron .in.<file> + rename
+      # que Hostinger rompe (su antivirus/sync quita dotfiles antes del
+      # rename y devuelve 550 No such file or directory).
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      # NOTA sobre --no-perms:
+      # Hostinger no le permite a este FTP user hacer `SITE CHMOD`. lftp
+      # por default intenta preservar permisos del archivo local y emite
+      # un chmod después de cada PUT, lo que devuelve 550 y aborta todo
+      # el mirror. `--no-perms` lo saltea — los archivos quedan con los
+      # perms default del usuario FTP (typically 644 / 755), que es lo
+      # que necesitamos.
+      #
+      # NOTA sobre --ignore-time + bash retry (en vez de --loop):
+      # El antivirus de Hostinger lockea archivos individuales durante
+      # el upload (550 transiente) Y modifica el mtime tras escanear.
+      # Con --loop nativo de lftp, el cambio de mtime hacía que cada
+      # iteración detectara TODOS los archivos como modificados → loop
+      # infinito (corrida real: 24min sin terminar).
+      #
+      # Fix: --ignore-time compara solo por size (el AV no toca el size,
+      # solo el mtime). Y envolvemos el lftp en un retry bash con tope
+      # de 3 intentos — total bounded a ~5-10 min worst case en vez de
+      # loop infinito.
+      #
+      # NOTA sobre --delete:
+      # Con chunks hasheados (vite.config.js: chunkFileNames con [hash])
+      # cada build produce nombres únicos. `mirror --delete` intenta
+      # borrar los hashes viejos del server, pero el antivirus de
+      # Hostinger los suele tener lockeados al momento del DELETE y
+      # devuelve "550 No such file" → lftp exit 1 → workflow rojo
+      # AUNQUE el upload de los archivos nuevos haya completado bien.
+      #
+      # Solución: dropear --delete. Los chunks viejos quedan huérfanos
+      # (5-30KB cada uno, ningún index.html actual los referencia, no
+      # rompen nada). Si la acumulación molesta a futuro, una limpieza
+      # manual periódica via FileZilla o un cron de Hostinger barre
+      # `dist/assets/*-<hash>.js` con timestamp > 30 días.
+      #
+      # .builds/ lo crea el sistema interno de Hostinger; lo seguimos
+      # excluyendo por las dudas.
+      - name: Deploy via lftp
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          attempt=0
+          max=3
+          until lftp -c "
+          set ftp:ssl-allow no;
+          set ssl:verify-certificate no;
+          set net:timeout 60;
+          set net:max-retries 10;
+          set net:reconnect-interval-base 5;
+          set net:reconnect-interval-multiplier 1.5;
+          set xfer:clobber on;
+          set ftp:use-allo off;
+          set mirror:parallel-transfer-count 1;
+          open -u '$FTP_USERNAME','$FTP_PASSWORD' '$FTP_SERVER';
+          mirror --reverse --verbose --parallel=1 --no-perms --ignore-time --exclude-glob .ftp-deploy-sync-state.json --exclude '(^|\/)\.builds(\/|$)' ./dist/ ./;
+          " || [ $attempt -ge $max ]; do
+            attempt=$((attempt + 1))
+            echo "::warning::lftp mirror falló (intento $attempt/$max). Reintentando en 15s..."
+            sleep 15
+          done
+          if [ $attempt -ge $max ]; then
+            echo "::error::lftp mirror falló después de $max intentos."
+            exit 1
+          fi
+
+      # H7.1 — smoke test post-deploy de higoapp.com.
+      # Verifica que el index.html servido contenga el title canonico.
+      # Hostinger a veces sirve HTML viejo 5-10s post-upload (caché del
+      # MTA / antivirus); reintentamos hasta 3 veces con backoff.
+      # Si las 3 fallan, el workflow se marca rojo aunque el upload haya
+      # completado: el deploy quedo en estado invalido y hay que mirarlo.
+      - name: Smoke test higoapp.com
+        run: |
+          echo "Esperando 10s para que Hostinger sirva el HTML nuevo..."
+          sleep 10
+          for i in 1 2 3; do
+            echo "Smoke test intento $i/3..."
+            if curl -fsS -o /tmp/index.html --max-time 20 "https://higoapp.com/?cb=$(date +%s)"; then
+              if grep -q "Higo - Tecnología" /tmp/index.html; then
+                echo "✓ Smoke test OK — title encontrado en HTML servido."
+                exit 0
+              else
+                echo "::warning::HTML sirvio pero NO contiene 'Higo - Tecnología'. Posible cache o deploy parcial."
+              fi
+            else
+              echo "::warning::curl fallo en intento $i."
+            fi
+            sleep 5
+          done
+          echo "::error::Smoke test fallo despues de 3 intentos. higoapp.com puede estar sirviendo HTML viejo o roto."
+          exit 1
+
+      # higodriver.com vive en un hosting Hostinger separado (FTP user
+      # u841591024.higodriver.com, path public_html). Subimos ./higodriver/
+      # entero, no solo el .php — incluye también el index.html del landing.
+      #
+      # Guard: si el secret HIGODRIVER_FTP_PASSWORD no está configurado,
+      # skipeamos sin romper el job — útil mientras se cargan los secrets.
+      - name: Deploy higodriver via lftp
+        env:
+          HIGODRIVER_FTP_SERVER: ${{ secrets.HIGODRIVER_FTP_SERVER }}
+          HIGODRIVER_FTP_USERNAME: ${{ secrets.HIGODRIVER_FTP_USERNAME }}
+          HIGODRIVER_FTP_PASSWORD: ${{ secrets.HIGODRIVER_FTP_PASSWORD }}
+        run: |
+          if [ -z "$HIGODRIVER_FTP_PASSWORD" ]; then
+            echo "::warning::HIGODRIVER_FTP_PASSWORD no está configurado — skipeando deploy de higodriver.com. Agregalo en Settings > Secrets para habilitar."
+            exit 0
+          fi
+          attempt=0
+          max=3
+          until lftp -c "
+          set ftp:ssl-allow no;
+          set ssl:verify-certificate no;
+          set net:timeout 60;
+          set net:max-retries 10;
+          set net:reconnect-interval-base 5;
+          set net:reconnect-interval-multiplier 1.5;
+          set xfer:clobber on;
+          set ftp:use-allo off;
+          set mirror:parallel-transfer-count 1;
+          open -u '$HIGODRIVER_FTP_USERNAME','$HIGODRIVER_FTP_PASSWORD' '$HIGODRIVER_FTP_SERVER';
+          mirror --reverse --verbose --parallel=1 --no-perms --ignore-time --exclude-glob .ftp-deploy-sync-state.json --exclude '(^|\/)\.builds(\/|$)' ./higodriver/ ./;
+          " || [ $attempt -ge $max ]; do
+            attempt=$((attempt + 1))
+            echo "::warning::lftp higodriver mirror falló (intento $attempt/$max). Reintentando en 15s..."
+            sleep 15
+          done
+          if [ $attempt -ge $max ]; then
+            echo "::error::lftp higodriver mirror falló después de $max intentos."
+            exit 1
+          fi
