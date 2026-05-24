@@ -1,20 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, Minus, Trash2, ShoppingBag, ArrowRight, Store } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Trash2, ShoppingBag, Store, AlertTriangle } from 'lucide-react';
 import { useCartStore } from '../../../stores/useCartStore.js';
+import { useLocationStore } from '../../../stores/useLocationStore.js';
 import { fetchStores } from '../../../services/storeService.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
+import { calculateDistance } from '../../../services/geolocation.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
 import './CartPage.css';
 
 export function CartPage() {
   const navigate = useNavigate();
-  const { carts, updateQuantity, removeItem, clearCart } = useCartStore();
+  const { carts, updateQuantity, removeItem } = useCartStore();
+  const { userLocation } = useLocationStore();
   const [storesList, setStoresList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch stores to get metadata (names, etc.) for the cart sections
+  // Fetch stores to get metadata (names, locations)
   useEffect(() => {
     let isMounted = true;
     fetchStores().then(data => {
@@ -30,9 +33,9 @@ export function CartPage() {
 
   if (isLoading) {
     return (
-      <div className="cart-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80dvh', gap: '16px' }}>
+      <div className="cart-page-loading">
         <Spinner size="lg" />
-        <p style={{ color: 'var(--higo-gray-400)' }}>Cargando carrito...</p>
+        <p>Cargando tus carritos activos...</p>
       </div>
     );
   }
@@ -44,26 +47,20 @@ export function CartPage() {
           <button className="cart-header__back" onClick={() => navigate(-1)}>
             <ArrowLeft size={20} />
           </button>
-          <h1>Mi Carrito</h1>
+          <h1>Carritos</h1>
         </div>
         <div className="cart-empty">
           <ShoppingBag size={64} strokeWidth={1.2} />
-          <h2>Tu carrito está vacío</h2>
-          <p>Explora los comercios y agrega productos</p>
+          <h2>Tu cesta está vacía</h2>
+          <p>Encuentra tus platos y productos favoritos en las tiendas de Higo Shop.</p>
           <Link to="/" className="cart-empty__btn">
             <Store size={18} />
-            Ver comercios
+            Explorar tiendas
           </Link>
         </div>
       </div>
     );
   }
-
-  // For now, handle first store cart (single-store checkout)
-  const currentStoreId = storeIds[0];
-  const store = storesList.find(s => s.id === currentStoreId);
-  const items = carts[currentStoreId]?.items || [];
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
     <div className="cart-page">
@@ -71,102 +68,122 @@ export function CartPage() {
         <button className="cart-header__back" onClick={() => navigate(-1)}>
           <ArrowLeft size={20} />
         </button>
-        <h1>Mi Carrito</h1>
+        <h1>Carritos</h1>
       </div>
 
-      {storeIds.map(storeId => {
-        const st = storesList.find(s => s.id === storeId);
-        const cartItems = carts[storeId]?.items || [];
-        const storeTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      <div className="carts-container">
+        {storeIds.map(storeId => {
+          const store = storesList.find(s => s.id === storeId);
+          const cartItems = carts[storeId]?.items || [];
+          const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+          
+          // Calculate distance and determine warning
+          const distance = userLocation && store
+            ? calculateDistance(userLocation.lat, userLocation.lng, store.latitude, store.longitude)
+            : 0;
+          const isFar = distance > 8; // 8km limit for delivery warning
 
-        return (
-          <div key={storeId} className="cart-store-section">
-            <div className="cart-store-name">
-              <Store size={16} />
-              {st?.name || 'Comercio'}
-            </div>
+          return (
+            <div key={storeId} className="cart-merchant-card animate-fade-in-up">
+              {/* Merchant Title & Emoji */}
+              <div className="cart-merchant-header">
+                <div className={`cart-merchant-emoji-bg cart-merchant-emoji-bg--${store?.category || 'restaurant'}`}>
+                  {store?.category === 'restaurant' ? '🫓' : store?.category === 'pharmacy' ? '💊' : store?.category === 'bakery' ? '🥐' : store?.category === 'grocery' ? '🛒' : '☕'}
+                </div>
+                <div className="cart-merchant-title-col">
+                  <h3>{store?.name || 'Cargando comercio...'}</h3>
+                  <span className="cart-merchant-address truncate">{store?.address}</span>
+                </div>
+              </div>
 
-            <div className="cart-items">
-              <AnimatePresence>
-                {cartItems.map(item => (
-                  <motion.div
-                    key={item.id}
-                    className="cart-item"
-                    layout
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0, padding: 0 }}
-                    transition={{ duration: 0.25 }}
-                  >
-                    <div className="cart-item__image">
-                      📦
-                    </div>
-                    <div className="cart-item__info">
-                      <div className="cart-item__name">{item.name}</div>
-                      <div className="cart-item__price">
-                        {formatCurrency(item.price * item.quantity)}
-                      </div>
-                    </div>
-                    <div className="cart-item__controls">
-                      <button
-                        className="cart-item__qty-btn cart-item__qty-btn--minus"
-                        onClick={() => updateQuantity(storeId, item.id, item.quantity - 1)}
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <span className="cart-item__qty">{item.quantity}</span>
-                      <button
-                        className="cart-item__qty-btn cart-item__qty-btn--plus"
-                        onClick={() => updateQuantity(storeId, item.id, item.quantity + 1)}
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                    <button
-                      className="cart-item__delete"
-                      onClick={() => removeItem(storeId, item.id)}
+              {/* Distance Warning banner */}
+              {isFar && (
+                <div className="cart-distance-warning">
+                  <AlertTriangle size={15} />
+                  <span>⚠️ Parece que estás lejos de esta tienda</span>
+                </div>
+              )}
+
+              {/* Cart Items List */}
+              <div className="cart-merchant-items">
+                <AnimatePresence>
+                  {cartItems.map(item => (
+                    <motion.div
+                      key={item.id}
+                      className="cart-merchant-item"
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -30, height: 0, padding: 0 }}
+                      transition={{ duration: 0.2 }}
                     >
-                      <Trash2 size={16} />
-                    </button>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                      <div className="cart-item-desc">
+                        <span className="cart-item-name">{item.name}</span>
+                        <span className="cart-item-price-each">{formatCurrency(item.price)} c/u</span>
+                      </div>
+
+                      <div className="cart-item-actions-row">
+                        <div className="cart-item-controls">
+                          <button
+                            className="cart-item-qty-btn"
+                            onClick={() => updateQuantity(storeId, item.id, item.quantity - 1)}
+                            disabled={item.quantity <= 1}
+                          >
+                            <Minus size={12} />
+                          </button>
+                          <span className="cart-item-qty">{item.quantity}</span>
+                          <button
+                            className="cart-item-qty-btn"
+                            onClick={() => updateQuantity(storeId, item.id, item.quantity + 1)}
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
+
+                        <span className="cart-item-total-price">
+                          {formatCurrency(item.price * item.quantity)}
+                        </span>
+
+                        <button
+                          className="cart-item-trash-btn"
+                          onClick={() => removeItem(storeId, item.id)}
+                          title="Eliminar artículo"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              {/* Cart Summary & Subtotal */}
+              <div className="cart-merchant-summary">
+                <div className="summary-row">
+                  <span>Subtotal ({cartItems.length} prod.)</span>
+                  <span className="summary-val">{formatCurrency(cartTotal)}</span>
+                </div>
+              </div>
+
+              {/* Merchant Checkout and Navigate Actions */}
+              <div className="cart-merchant-actions">
+                <Link
+                  to={`/checkout/${storeId}`}
+                  className="btn-merchant-checkout"
+                  id={`checkout-store-${storeId}`}
+                >
+                  Ve al carrito ({formatCurrency(cartTotal)})
+                </Link>
+                <Link
+                  to={`/store/${storeId}`}
+                  className="btn-merchant-continue"
+                >
+                  Ve la tienda
+                </Link>
+              </div>
             </div>
-          </div>
-        );
-      })}
-
-      {/* Summary */}
-      <div className="cart-summary">
-        <div className="cart-summary__row">
-          <span>Subtotal ({items.length} productos)</span>
-          <span>{formatCurrency(subtotal)}</span>
-        </div>
-        <div className="cart-summary__row">
-          <span>Envío</span>
-          <span style={{ color: 'var(--higo-gray-400)', fontSize: 'var(--font-xs)' }}>
-            Calculado en checkout
-          </span>
-        </div>
-        <div className="cart-summary__row cart-summary__row--total">
-          <span>Total productos</span>
-          <span>{formatCurrency(subtotal)}</span>
-        </div>
-      </div>
-
-      {/* Checkout Bar */}
-      <div className="cart-checkout-bar">
-        <Link
-          to={`/checkout/${currentStoreId}`}
-          className="cart-checkout-btn"
-          id="go-to-checkout"
-        >
-          <span>Ir al Checkout</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {formatCurrency(subtotal)}
-            <ArrowRight size={18} />
-          </span>
-        </Link>
+          );
+        })}
       </div>
     </div>
   );

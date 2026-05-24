@@ -67,11 +67,12 @@ export function OrderDetailPage() {
   const chatEndRef = useRef(null);
   const simulationTimers = useRef([]);
 
-  // Geolocation & Driver Tracking Animation State
+  // Driver Tracking & Leg State
   const [driverPos, setDriverPos] = useState(null);
-  const [animationStep, setAnimationStep] = useState(0);
+  const [currentLeg, setCurrentLeg] = useState('none'); // 'none' | 'to_store' | 'at_store' | 'to_client' | 'delivered'
+  const [legStep, setLegStep] = useState(0);
 
-  // Initialize Chat and Fetch Store metadata
+  // Set initial driver position & Leg state matching order status
   useEffect(() => {
     if (!order) return;
     
@@ -82,9 +83,24 @@ export function OrderDetailPage() {
       setIsLoadingStore(false);
     });
 
-    // Set initial driver position at the store
-    setDriverPos({ lat: order.storeLocation.lat, lng: order.storeLocation.lng });
-  }, [orderId, order]);
+    const storeLat = order.storeLocation.lat;
+    const storeLng = order.storeLocation.lng;
+    const startLat = storeLat + 0.006;
+    const startLng = storeLng - 0.008;
+
+    if (order.status === 'DRIVER_ASSIGNED') {
+      setCurrentLeg('to_store');
+    } else if (order.status === 'PICKED_UP') {
+      setCurrentLeg('to_client');
+    } else if (order.status === 'DELIVERED') {
+      setDriverPos({ lat: order.userLocation.lat, lng: order.userLocation.lng });
+      setCurrentLeg('delivered');
+    } else {
+      setDriverPos({ lat: startLat, lng: startLng });
+      setCurrentLeg('none');
+      setLegStep(0);
+    }
+  }, [orderId, order?.status]);
 
   // Scroll chat to bottom automatically
   useEffect(() => {
@@ -98,37 +114,33 @@ export function OrderDetailPage() {
     };
   }, []);
 
-  // Driver Realtime Movement Simulation along the route path
+  // Anim Leg 1: Driver moving from start position to Store
   useEffect(() => {
-    if (!order || order.status !== 'PICKED_UP') return;
+    if (!order || currentLeg !== 'to_store') return;
 
-    const startLat = order.storeLocation.lat;
-    const startLng = order.storeLocation.lng;
-    const endLat = order.userLocation.lat;
-    const endLng = order.userLocation.lng;
+    const storeLat = order.storeLocation.lat;
+    const storeLng = order.storeLocation.lng;
+    const startLat = storeLat + 0.006;
+    const startLng = storeLng - 0.008;
 
-    // Slide driver coordinates from store to user location in 15 steps
-    const totalSteps = 15;
+    const totalSteps = 10;
     const interval = setInterval(() => {
-      setAnimationStep(prev => {
+      setLegStep(prev => {
         const nextStep = prev + 1;
         if (nextStep >= totalSteps) {
           clearInterval(interval);
-          // Auto advance to DELIVERED once driver arrives
-          updateOrderStatus(orderId, 'DELIVERED');
+          setCurrentLeg('at_store');
           
           addMessage(orderId, 'driverMessages', {
             sender: 'driver',
-            text: '👋 ¡He llegado! Estoy afuera de tu dirección de entrega. ¡Gracias por preferir Higo Shop!',
+            text: '🏪 Ya he llegado a la tienda. Estoy esperando el empaquetado final de tu pedido.',
           });
-          
           return totalSteps;
         }
 
-        // Interpolate position
         const ratio = nextStep / totalSteps;
-        const currentLat = startLat + (endLat - startLat) * ratio;
-        const currentLng = startLng + (endLng - startLng) * ratio;
+        const currentLat = startLat + (storeLat - startLat) * ratio;
+        const currentLng = startLng + (storeLng - startLng) * ratio;
         setDriverPos({ lat: currentLat, lng: currentLng });
 
         return nextStep;
@@ -136,7 +148,65 @@ export function OrderDetailPage() {
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [order?.status]);
+  }, [currentLeg]);
+
+  // Leg 2: Driver waiting at Store (triggers pickup after 4s)
+  useEffect(() => {
+    if (!order || currentLeg !== 'at_store') return;
+
+    const timer = setTimeout(() => {
+      updateOrderStatus(orderId, 'PICKED_UP');
+      
+      addMessage(orderId, 'driverMessages', {
+        sender: 'driver',
+        text: '🚀 ¡Pedido retirado con éxito! Voy conduciendo en dirección a tu domicilio. Puedes seguirme en vivo en el mapa.',
+      });
+
+      addMessage(orderId, 'storeMessages', {
+        sender: 'store',
+        text: '📦 El driver retiró tu paquete y va en camino a entregártelo. ¡Buen provecho!'
+      });
+    }, 4500);
+
+    return () => clearTimeout(timer);
+  }, [currentLeg]);
+
+  // Anim Leg 3: Driver moving from Store to Client
+  useEffect(() => {
+    if (!order || currentLeg !== 'to_client') return;
+
+    const storeLat = order.storeLocation.lat;
+    const storeLng = order.storeLocation.lng;
+    const userLat = order.userLocation.lat;
+    const userLng = order.userLocation.lng;
+
+    const totalSteps = 12;
+    const interval = setInterval(() => {
+      setLegStep(prev => {
+        const nextStep = prev + 1;
+        if (nextStep >= totalSteps) {
+          clearInterval(interval);
+          setCurrentLeg('delivered');
+          updateOrderStatus(orderId, 'DELIVERED');
+          
+          addMessage(orderId, 'driverMessages', {
+            sender: 'driver',
+            text: '👋 ¡He llegado! Estoy afuera con tu pedido listo. ¡Gracias por elegir Higo Shop!',
+          });
+          return totalSteps;
+        }
+
+        const ratio = nextStep / totalSteps;
+        const currentLat = storeLat + (userLat - storeLat) * ratio;
+        const currentLng = storeLng + (userLng - storeLng) * ratio;
+        setDriverPos({ lat: currentLat, lng: currentLng });
+
+        return nextStep;
+      });
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [currentLeg]);
 
   if (!order) {
     return (
@@ -181,7 +251,7 @@ export function OrderDetailPage() {
       const timer = setTimeout(() => {
         addMessage(orderId, 'driverMessages', {
           sender: 'driver',
-          text: '¡Entendido! Ya voy en camino para completar el servicio lo antes posible. 🛵⚡'
+          text: '¡Entendido! Ya voy conduciendo para entregarte tu pedido lo antes posible. 🛵⚡'
         });
       }, 2000);
       simulationTimers.current.push(timer);
@@ -190,90 +260,69 @@ export function OrderDetailPage() {
 
   // Simulates uploading and sharing the Pago Móvil transfer proof screenshot
   const handleSimulatePaymentProof = () => {
-    // 1. Send simulated payment capture
     addMessage(orderId, 'storeMessages', {
       sender: 'customer',
       text: '📄 Comprobante_Pago_Movil.jpg',
       image: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=300&auto=format&fit=crop&q=60'
     });
 
-    // 2. Reply 1: Store starts validation
     let timer1 = setTimeout(() => {
       addMessage(orderId, 'storeMessages', {
         sender: 'store',
         text: '👋 ¡Hola! Recibimos el capture de tu Pago Móvil. Estamos validando la referencia en nuestra cuenta bancaria. Demorará unos segundos.'
       });
-    }, 2500);
+    }, 2000);
     simulationTimers.current.push(timer1);
 
-    // 3. Reply 2: Store validates payment, advances status to PAYMENT_VERIFIED
     let timer2 = setTimeout(() => {
       updateOrderStatus(orderId, 'PAYMENT_VERIFIED');
       addMessage(orderId, 'storeMessages', {
         sender: 'store',
         text: `💰 ¡Listo! Pago verificado en cuenta. Su pedido por total de ${formatCurrency(order.productTotal)} ha sido aprobado. Pasa a cocina inmediatamente.`
       });
-    }, 6000);
+    }, 4500);
     simulationTimers.current.push(timer2);
 
-    // 4. Reply 3: Store preparing, status to PREPARING
     let timer3 = setTimeout(() => {
       updateOrderStatus(orderId, 'PREPARING');
       addMessage(orderId, 'storeMessages', {
         sender: 'store',
         text: '👨‍🍳 Tu pedido ya se está preparando con ingredientes frescos. ¡Huele delicioso!'
       });
-    }, 11000);
+    }, 8500);
     simulationTimers.current.push(timer3);
 
-    // 5. Reply 4: Store packed, status to READY_TO_DISPATCH
     let timer4 = setTimeout(() => {
       updateOrderStatus(orderId, 'READY_TO_DISPATCH');
       addMessage(orderId, 'storeMessages', {
         sender: 'store',
         text: '📦 ¡Pedido listo y empaquetado! Buscando al Higo Driver más cercano para el retiro...'
       });
-    }, 17000);
+    }, 12500);
     simulationTimers.current.push(timer4);
 
-    // 6. Driver Assignment, status to DRIVER_ASSIGNED
     let timer5 = setTimeout(() => {
       updateOrderStatus(orderId, 'DRIVER_ASSIGNED');
       
-      // Post system message in Driver tab
       addMessage(orderId, 'driverMessages', {
         sender: 'driver',
         text: '🛵 Higo Driver "Carlos Mendoza" ha aceptado el despacho.',
         system: true
       });
 
-      // Post driver's greeting
       addMessage(orderId, 'driverMessages', {
         sender: 'driver',
-        text: '¡Buenas noches! Soy Carlos Mendoza, tu Higo Driver asignado. Ya voy en camino a retirar tu pedido en el comercio. 💨'
+        text: '¡Buenas noches! Soy Carlos Mendoza, tu Higo Driver asignado. Ya arranqué y voy conduciendo en dirección a la tienda para recoger tu pedido. 💨'
       });
 
-      // Notify in store chat too
       addMessage(orderId, 'storeMessages', {
         sender: 'store',
         text: '🛵 El driver Carlos Mendoza ha sido asignado y va en camino a retirar el paquete.'
       });
       
-      // Auto switch active tab to Driver to show the new assignee
       setActiveTab('driver');
-    }, 22000);
+    }, 16500);
     simulationTimers.current.push(timer5);
-
-    // 7. Dispatch, status to PICKED_UP
-    let timer6 = setTimeout(() => {
-      updateOrderStatus(orderId, 'PICKED_UP');
-      
-      addMessage(orderId, 'driverMessages', {
-        sender: 'driver',
-        text: '🚀 ¡Pedido retirado con éxito! Voy en camino a tu dirección. Puedes seguir mi trayecto en vivo en el mapa de arriba.'
-      });
-    }, 28000);
-    simulationTimers.current.push(timer6);
   };
 
   const getStepIndex = (status) => {
@@ -287,6 +336,12 @@ export function OrderDetailPage() {
     (order.userLocation.lat + order.storeLocation.lat) / 2,
     (order.userLocation.lng + order.storeLocation.lng) / 2,
   ];
+
+  // Helper variables for movement polylines
+  const storeLat = order.storeLocation.lat;
+  const storeLng = order.storeLocation.lng;
+  const startLat = storeLat + 0.006;
+  const startLng = storeLng - 0.008;
 
   return (
     <div className="order-detail-page">
@@ -322,31 +377,48 @@ export function OrderDetailPage() {
             <Popup>🏪 {order.storeName}</Popup>
           </Marker>
 
-          {/* Route path */}
-          <Polyline
-            positions={[
-              [order.userLocation.lat, order.userLocation.lng],
-              [order.storeLocation.lat, order.storeLocation.lng],
-            ]}
-            color="var(--higo-blue)"
-            weight={3.5}
-            opacity={0.6}
-            dashArray="6, 8"
-          />
+          {/* Dynamic Polylines based on real-time leg */}
+          {currentLeg === 'to_store' ? (
+            <Polyline
+              positions={[
+                [startLat, startLng],
+                [storeLat, storeLng],
+              ]}
+              color="var(--higo-success)"
+              weight={4}
+              opacity={0.8}
+              dashArray="6, 8"
+            />
+          ) : (
+            <Polyline
+              positions={[
+                [storeLat, storeLng],
+                [order.userLocation.lat, order.userLocation.lng],
+              ]}
+              color="var(--higo-gray-900)"
+              weight={4}
+              opacity={0.7}
+            />
+          )}
 
-          {/* Driver Location (only when assigned, preparing or picked up) */}
-          {(order.status === 'DRIVER_ASSIGNED' || order.status === 'PICKED_UP' || order.status === 'DELIVERED') && driverPos && (
+          {/* Driver Location Marker */}
+          {driverPos && (
             <Marker position={[driverPos.lat, driverPos.lng]} icon={driverIcon}>
               <Popup>🛵 Carlos Mendoza (Higo Driver)</Popup>
             </Marker>
           )}
         </MapContainer>
 
-        {/* Floating Distance Badge */}
-        {order.status === 'PICKED_UP' && (
+        {/* Floating Leg Status Card */}
+        {currentLeg !== 'none' && (
           <div className="floating-driver-eta">
             <Clock size={14} className="spinning-icon" />
-            <span>Repartidor en camino — Llegada estimada ~{15 - animationStep}s</span>
+            <span>
+              {currentLeg === 'to_store' && 'Repartidor en camino a la tienda...'}
+              {currentLeg === 'at_store' && 'Repartidor en tienda verificando pedido...'}
+              {currentLeg === 'to_client' && '¡Pedido en camino a tu dirección!'}
+              {currentLeg === 'delivered' && '¡Entregado! Disfruta tu compra'}
+            </span>
           </div>
         )}
       </div>

@@ -7,9 +7,9 @@ import {
   Star,
   Clock,
   Navigation,
-  Store,
   SearchX,
-  User
+  Bell,
+  ChevronDown
 } from 'lucide-react';
 import { fetchStores } from '../../../services/storeService.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
@@ -19,24 +19,24 @@ import './MarketplaceHome.css';
 
 const CATEGORIES = [
   { id: 'all', label: 'Todos', emoji: '🏪' },
-  { id: 'restaurant', label: 'Restaurantes', emoji: '🍽️' },
-  { id: 'pharmacy', label: 'Farmacias', emoji: '💊' },
-  { id: 'bakery', label: 'Panaderías', emoji: '🥐' },
-  { id: 'grocery', label: 'Bodegas', emoji: '🛒' },
-  { id: 'cafe', label: 'Cafés', emoji: '☕' },
+  { id: 'restaurant', label: 'Restaurante', emoji: '🫓' },
+  { id: 'pharmacy', label: 'Farmacia', emoji: '💊' },
+  { id: 'bakery', label: 'Panadería', emoji: '🥐' },
+  { id: 'grocery', label: 'Bodega', emoji: '🛒' },
+  { id: 'cafe', label: 'Café', emoji: '☕' },
 ];
 
 const staggerChildren = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.06 }
+    transition: { staggerChildren: 0.05 }
   }
 };
 
 const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } }
+  hidden: { opacity: 0, y: 15 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } }
 };
 
 export function MarketplaceHome() {
@@ -90,87 +90,119 @@ export function MarketplaceHome() {
 
   return (
     <div className="marketplace-home">
-      {/* Hero Section */}
-      <div className="marketplace-hero">
+      {/* Uber Eats Header */}
+      <div className="marketplace-header-uber">
         <div className="hero-top">
           <div className="hero-location">
-            <MapPin size={16} />
-            <span className="hero-location-text truncate">
-              {userLocation ? 'Caracas, Venezuela' : 'Obteniendo ubicación...'}
-            </span>
+            <span className="hero-deliver-to">Entregar ahora</span>
+            <div className="hero-address-row">
+              <MapPin size={16} className="pin-icon" />
+              <span className="hero-location-text truncate">
+                {userLocation ? 'Caracas, Venezuela' : 'Obteniendo ubicación...'}
+              </span>
+              <ChevronDown size={14} className="chevron-icon" />
+            </div>
           </div>
-          <Link to="/profile" className="hero-profile-btn">
-            <User size={20} />
-          </Link>
+          <div className="hero-actions">
+            <button className="hero-notification-btn">
+              <Bell size={20} />
+            </button>
+          </div>
         </div>
 
-        <motion.div
-          className="hero-greeting"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1>Higo Shop</h1>
-          <p>Pide lo que quieras, te lo llevamos 🛵</p>
-        </motion.div>
-
-        <motion.div
-          className="marketplace-search"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
-          <div className="search-input-wrapper">
-            <Search size={20} />
+        {/* Search Input Bar */}
+        <div className="marketplace-search-uber">
+          <div className="search-input-wrapper-uber">
+            <Search size={18} className="search-icon" />
             <input
               type="text"
-              placeholder="Buscar comercios, productos..."
+              placeholder="¿Qué te provoca comer hoy?"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               id="marketplace-search"
             />
           </div>
-        </motion.div>
+        </div>
       </div>
 
-      {/* Categories */}
-      <div className="marketplace-categories">
-        <div className="categories-scroll">
+      {/* Quick Pills */}
+      <div className="quick-pills-bar">
+        {['Todos', 'Viajes', 'Súper', 'Express'].map((pill, idx) => (
+          <button 
+            key={pill} 
+            className={`quick-pill ${idx === 0 ? 'active' : ''}`}
+          >
+            {pill === 'Todos' ? '🛒' : pill === 'Viajes' ? '🚗' : pill === 'Súper' ? '📦' : '⚡'} {pill}
+          </button>
+        ))}
+      </div>
+
+      {/* Category Grid (Uber Eats Style Grid) */}
+      <div className="marketplace-category-section">
+        <div className="marketplace-grid-categories">
           {CATEGORIES.map(cat => (
             <button
               key={cat.id}
-              className={`category-chip ${activeCategory === cat.id ? 'category-chip--active' : ''}`}
+              className={`grid-category-card ${activeCategory === cat.id ? 'active' : ''}`}
               onClick={() => setActiveCategory(cat.id)}
               id={`category-${cat.id}`}
             >
-              <span className="chip-emoji">{cat.emoji}</span>
-              {cat.label}
+              <div className="grid-category-circle">
+                <span className="grid-category-emoji">{cat.emoji}</span>
+              </div>
+              <span className="grid-category-label">{cat.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Stores */}
-      <div className="section-header">
+      {/* Promotions Section */}
+      <div className="promotions-carousel-section">
+        <h3 className="section-title">Promociones para ti</h3>
+        <div className="promotions-scroll">
+          {stores.slice(0, 4).map((store, idx) => {
+            const promoBadges = ["Promoción 2x1", "Envío Gratis", "15% de Descuento", "Ahorra 10 Bs."];
+            const promoBadge = promoBadges[idx % promoBadges.length];
+            return (
+              <Link to={`/store/${store.id}`} key={store.id} className="promo-card">
+                <div className={`promo-card-bg promo-card-bg--${store.category}`}>
+                  <span className="promo-emoji">
+                    {store.category === 'restaurant' ? '🍔' : store.category === 'pharmacy' ? '💊' : store.category === 'bakery' ? '🥐' : '🛒'}
+                  </span>
+                  <span className="promo-badge-tag">{promoBadge}</span>
+                </div>
+                <div className="promo-card-info">
+                  <span className="promo-store-name truncate">{store.name}</span>
+                  <span className="promo-store-meta">★ {store.rating.toFixed(1)} • {store.deliveryTime}</span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Store List Header */}
+      <div className="section-header-uber">
         <h2>
           {activeCategory === 'all'
-            ? 'Comercios cerca de ti'
-            : CATEGORIES.find(c => c.id === activeCategory)?.label
+            ? 'Todos los comercios'
+            : `Comercios de ${CATEGORIES.find(c => c.id === activeCategory)?.label}`
           }
         </h2>
-        <span style={{ fontSize: 'var(--font-sm)', color: 'var(--higo-gray-400)' }}>
-          {filteredStores.length} disponibles
+        <span className="stores-count-badge">
+          {filteredStores.length} cerca de ti
         </span>
       </div>
 
+      {/* Store Feed */}
       {isLoading ? (
-        <div className="empty-state" style={{ minHeight: '30vh' }}>
+        <div className="empty-state" style={{ minHeight: '20vh' }}>
           <Spinner size="lg" />
-          <p style={{ marginTop: 'var(--space-3)', color: 'var(--higo-gray-400)' }}>Buscando comercios...</p>
+          <p style={{ marginTop: 'var(--space-3)', color: 'var(--higo-gray-500)' }}>Cargando comercios de Caracas...</p>
         </div>
       ) : filteredStores.length > 0 ? (
         <motion.div
-          className="stores-grid"
+          className="stores-feed"
           variants={staggerChildren}
           initial="hidden"
           animate="visible"
@@ -187,8 +219,8 @@ export function MarketplaceHome() {
       ) : (
         <div className="empty-state">
           <SearchX size={48} />
-          <h3>Sin resultados</h3>
-          <p>No encontramos comercios con ese criterio</p>
+          <h3>No se encontraron resultados</h3>
+          <p>Prueba buscando otra categoría o nombre de comercio</p>
         </div>
       )}
     </div>
@@ -201,44 +233,54 @@ function StoreCard({ store, userLocation }) {
     : null;
 
   const categoryEmojis = {
-    restaurant: '🍽️',
+    restaurant: '🫓',
     pharmacy: '💊',
     bakery: '🥐',
     grocery: '🛒',
     cafe: '☕',
   };
 
+  const categoryLabel = {
+    restaurant: 'Restaurante',
+    pharmacy: 'Farmacia',
+    bakery: 'Panadería',
+    grocery: 'Bodega',
+    cafe: 'Cafetería',
+  };
+
   return (
     <motion.div variants={fadeInUp}>
-      <Link to={`/store/${store.id}`} className="store-card" id={`store-${store.id}`}>
-        <div className="store-card__image">
-          <div className={`store-card__image-placeholder store-card__image-placeholder--${store.category}`}>
+      <Link to={`/store/${store.id}`} className="store-feed-card" id={`store-${store.id}`}>
+        <div className="store-feed-image-wrapper">
+          <div className={`store-feed-image-placeholder store-feed-image-placeholder--${store.category}`}>
             {categoryEmojis[store.category] || '🏪'}
           </div>
           {!store.isOpen && (
-            <div className="store-card__closed-tag">Cerrado</div>
+            <div className="store-feed-closed-overlay">Cerrado ahora</div>
+          )}
+          {store.rating >= 4.7 && (
+            <div className="store-feed-popular-badge">⭐ Destacado</div>
           )}
         </div>
 
-        <div className="store-card__info">
-          <div className="store-card__name truncate">{store.name}</div>
-          <div className="store-card__category">{store.category === 'restaurant' ? 'Restaurante' : store.category === 'pharmacy' ? 'Farmacia' : store.category === 'bakery' ? 'Panadería' : store.category === 'grocery' ? 'Bodega' : 'Café'}</div>
+        <div className="store-feed-info">
+          <div className="store-feed-title-row">
+            <span className="store-feed-name">{store.name}</span>
+            <div className="store-feed-rating">
+              <span>{store.rating.toFixed(1)}</span>
+              <Star size={13} fill="currentColor" className="star-icon" />
+            </div>
+          </div>
 
-          <div className="store-card__meta">
-            <div className="store-card__rating">
-              <Star size={14} fill="currentColor" />
-              {store.rating.toFixed(1)}
-              <span className="store-card__rating-count">({store.reviewCount})</span>
-            </div>
-            <div className="store-card__delivery">
-              <Clock size={13} />
-              {store.deliveryTime}
-            </div>
+          <div className="store-feed-meta-row">
+            <span className="store-feed-category">{categoryLabel[store.category] || 'Comercio'}</span>
+            <span className="store-feed-bullet">•</span>
+            <span className="store-feed-time">{store.deliveryTime}</span>
             {distance !== null && (
-              <div className="store-card__distance">
-                <Navigation size={13} />
-                {formatDistance(distance)}
-              </div>
+              <>
+                <span className="store-feed-bullet">•</span>
+                <span className="store-feed-distance">{formatDistance(distance)}</span>
+              </>
             )}
           </div>
         </div>

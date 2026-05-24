@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, ShoppingBag, ClipboardList, MessageCircle, User } from 'lucide-react';
+import { Home, Search, ShoppingBag, User } from 'lucide-react';
 import { useCartStore } from '../../stores/useCartStore.js';
 import './BottomNav.css';
 
@@ -8,8 +8,8 @@ export function BottomNav() {
 
   const tabs = [
     { to: '/', icon: Home, label: 'Inicio' },
-    { to: '/cart', icon: ShoppingBag, label: 'Carrito', badge: totalItems },
-    { to: '/orders', icon: ClipboardList, label: 'Pedidos' },
+    { to: '/search', icon: Search, label: 'Buscar' },
+    { to: '/cart', icon: ShoppingBag, label: 'Carritos', badge: totalItems },
     { to: '/profile', icon: User, label: 'Perfil' },
   ];
 

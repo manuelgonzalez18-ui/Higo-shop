@@ -1,84 +1,97 @@
 import { useAuthStore } from '../../../stores/useAuthStore.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
-import { MapPin, User, Phone, Shield, Navigation, RefreshCw } from 'lucide-react';
+import { MapPin, Phone, Shield, Home, Briefcase, ArrowRight } from 'lucide-react';
+import './ProfilePage.css';
 
 export function ProfilePage() {
-  const { role, userName, userPhone } = useAuthStore();
-  const { deliveryAddress, requestLocation, isLocating } = useLocationStore();
+  const { role, userName, userPhone, setRole } = useAuthStore();
+  const { deliveryAddress } = useLocationStore();
+
+  const handleRoleCycle = () => {
+    // Cycles role for easy testing in profile
+    if (role === 'customer') setRole('merchant');
+    else if (role === 'merchant') setRole('driver');
+    else setRole('customer');
+  };
+
+  const handleLogout = () => {
+    alert('Sesión cerrada correctamente.');
+  };
+
+  const savedLocations = [
+    { alias: 'Casa', address: 'Miami Beach, FL, EE. UU.', icon: Home },
+    { alias: 'Trabajo', address: 'Torre La Previsora, Caracas, VE', icon: Briefcase },
+  ];
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--higo-gray-50)' }}>
-      {/* Profile Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, var(--higo-blue), var(--higo-blue-dark))',
-        padding: '2.5rem 1.5rem 3rem',
-        textAlign: 'center',
-        color: 'white',
-      }}>
-        <div style={{
-          width: 72, height: 72, borderRadius: '50%', margin: '0 auto 1rem',
-          background: 'rgba(255,255,255,0.2)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
-        }}>
-          <User size={32} />
+    <div className="profile-page animate-fade-in">
+      {/* Profile Header Block */}
+      <div className="profile-header-uber">
+        <div className="profile-avatar-circle">
+          {userName ? userName.charAt(0) : 'U'}
         </div>
-        <h1 style={{ fontSize: 'var(--font-xl)', fontWeight: 700, marginBottom: 4 }}>
-          {userName}
-        </h1>
-        <p style={{ fontSize: 'var(--font-sm)', opacity: 0.75 }}>
-          {role === 'customer' ? '👤 Cliente' : role === 'merchant' ? '🏪 Comercio' : '🛵 Driver'}
-        </p>
+        <div className="profile-info-col">
+          <h2>{userName || 'Usuario Higo'}</h2>
+          <span className="profile-edit-link" onClick={() => alert('Edición de cuenta en desarrollo')}>
+            EDITA LA CUENTA
+          </span>
+        </div>
       </div>
 
-      <div style={{ padding: '1rem', marginTop: -20 }}>
-        {/* Info Card */}
-        <div style={{
-          background: 'white', borderRadius: 16, padding: '1.25rem',
-          boxShadow: 'var(--shadow-md)', marginBottom: '1rem',
-        }}>
-          <h3 style={{ fontSize: 'var(--font-base)', fontWeight: 700, marginBottom: '1rem' }}>
-            Información
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 'var(--font-sm)', color: 'var(--higo-gray-600)' }}>
-              <Phone size={16} color="var(--higo-blue)" />
-              {userPhone}
+      {/* Saved Locations */}
+      <div className="profile-saved-locations">
+        <h3 className="profile-section-title">Lugares guardados</h3>
+        <div className="saved-locations-list">
+          {savedLocations.map((loc) => (
+            <div key={loc.alias} className="saved-location-item" onClick={() => alert(`Ubicación seleccionada: ${loc.alias}`)}>
+              <div className="location-icon-bg">
+                <loc.icon size={18} />
+              </div>
+              <div className="location-details">
+                <span className="location-alias">{loc.alias}</span>
+                <span className="location-address truncate">{loc.address}</span>
+              </div>
+              <ArrowRight size={14} style={{ color: 'var(--higo-gray-400)' }} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 'var(--font-sm)', color: 'var(--higo-gray-600)' }}>
-              <MapPin size={16} color="var(--higo-blue)" />
-              {deliveryAddress}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 'var(--font-sm)', color: 'var(--higo-gray-600)' }}>
-              <Shield size={16} color="var(--higo-blue)" />
-              Rol actual: {role}
-            </div>
-          </div>
+          ))}
         </div>
+      </div>
 
-        {/* Location Card */}
-        <div style={{
-          background: 'white', borderRadius: 16, padding: '1.25rem',
-          boxShadow: 'var(--shadow-sm)', border: '1px solid var(--higo-gray-100)',
-        }}>
-          <h3 style={{ fontSize: 'var(--font-base)', fontWeight: 700, marginBottom: '0.75rem' }}>
-            <Navigation size={16} style={{ marginRight: 8, verticalAlign: -2 }} />
-            Ubicación
-          </h3>
-          <button
-            onClick={requestLocation}
-            disabled={isLocating}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '10px 16px', background: 'var(--higo-blue-50)',
-              color: 'var(--higo-blue)', borderRadius: 8,
-              fontSize: 'var(--font-sm)', fontWeight: 600,
-              opacity: isLocating ? 0.6 : 1,
-            }}
-          >
-            <RefreshCw size={15} className={isLocating ? 'spin' : ''} />
-            {isLocating ? 'Obteniendo...' : 'Actualizar ubicación'}
-          </button>
+      {/* Meta Info Panel */}
+      <div className="profile-meta-info">
+        <h3 className="profile-section-title" style={{ fontSize: '0.85rem', marginBottom: '8px' }}>
+          Configuración de la app
+        </h3>
+        <div className="profile-meta-row">
+          <span className="label">
+            <Phone size={14} style={{ marginRight: 6, verticalAlign: -2 }} /> Teléfono
+          </span>
+          <span className="value">{userPhone}</span>
         </div>
+        <div className="profile-meta-row">
+          <span className="label">
+            <MapPin size={14} style={{ marginRight: 6, verticalAlign: -2 }} /> Dirección
+          </span>
+          <span className="value truncate" style={{ maxWidth: '160px' }}>{deliveryAddress}</span>
+        </div>
+        <div className="profile-meta-row">
+          <span className="label">
+            <Shield size={14} style={{ marginRight: 6, verticalAlign: -2 }} /> Rol activo
+          </span>
+          <span className="value" style={{ textTransform: 'capitalize' }}>
+            {role === 'customer' ? 'Cliente' : role === 'merchant' ? 'Comercio' : 'Repartidor'}
+          </span>
+        </div>
+      </div>
+
+      {/* Footer Critical Actions */}
+      <div className="profile-footer-actions">
+        <button className="btn-profile-switch-account" onClick={handleRoleCycle}>
+          Cambiar de cuenta (Simular {role === 'customer' ? 'Comercio' : role === 'merchant' ? 'Repartidor' : 'Cliente'})
+        </button>
+        <button className="btn-profile-logout" onClick={handleLogout}>
+          Cerrar sesión
+        </button>
       </div>
     </div>
   );
