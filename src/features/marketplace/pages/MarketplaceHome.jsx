@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Search,
   MapPin,
@@ -10,14 +10,11 @@ import {
   SearchX,
   Bell,
   ChevronDown,
-  X,
-  LocateFixed,
 } from 'lucide-react';
-import { useMapsLibrary } from '@vis.gl/react-google-maps';
 import { fetchStores } from '../../../services/storeService.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
-import { calculateDistance, formatDistance, getCurrentPosition } from '../../../services/geolocation.js';
-import { AddressAutocomplete } from '../../../components/maps/AddressAutocomplete.jsx';
+import { calculateDistance, formatDistance } from '../../../services/geolocation.js';
+import { AddressPickerSheet } from '../../../components/address/AddressPickerSheet.jsx';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
 import './MarketplaceHome.css';
 
@@ -232,6 +229,7 @@ export function MarketplaceHome() {
       <AddressPickerSheet
         isOpen={isAddressPickerOpen}
         currentAddress={deliveryAddress}
+        showSavedLocations
         onClose={() => setIsAddressPickerOpen(false)}
         onSelect={(place) => {
           setUserLocation({ lat: place.lat, lng: place.lng });
@@ -243,85 +241,6 @@ export function MarketplaceHome() {
   );
 }
 
-function AddressPickerSheet({ isOpen, currentAddress, onClose, onSelect }) {
-  const [draft, setDraft] = useState(currentAddress || '');
-  const [isLocating, setIsLocating] = useState(false);
-  const geocodingLib = useMapsLibrary('geocoding');
-
-  useEffect(() => {
-    if (isOpen) setDraft(currentAddress || '');
-  }, [isOpen, currentAddress]);
-
-  const handleUseMyLocation = async () => {
-    setIsLocating(true);
-    try {
-      const pos = await getCurrentPosition();
-      if (!geocodingLib) {
-        onSelect({ address: 'Mi ubicación actual', lat: pos.lat, lng: pos.lng });
-        return;
-      }
-      const geocoder = new geocodingLib.Geocoder();
-      geocoder.geocode({ location: pos }, (results, status) => {
-        const address = status === 'OK' && results[0]
-          ? results[0].formatted_address
-          : 'Mi ubicación actual';
-        onSelect({ address, lat: pos.lat, lng: pos.lng });
-        setIsLocating(false);
-      });
-    } catch {
-      setIsLocating(false);
-    }
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            className="address-picker-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-          <motion.div
-            className="address-picker-sheet"
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-          >
-            <div className="address-picker-header">
-              <h3>Cambiar dirección</h3>
-              <button className="address-picker-close" onClick={onClose} type="button">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="address-picker-body">
-              <AddressAutocomplete
-                value={draft}
-                onChange={setDraft}
-                onPlaceSelect={onSelect}
-                placeholder="Buscar dirección con Google Maps..."
-                className="address-picker-input"
-                autoFocus
-              />
-              <button
-                className="address-picker-locate"
-                onClick={handleUseMyLocation}
-                disabled={isLocating}
-                type="button"
-              >
-                <LocateFixed size={16} className={isLocating ? 'spinning-icon' : ''} />
-                {isLocating ? 'Obteniendo ubicación...' : 'Usar mi ubicación actual'}
-              </button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
 
 function StoreCard({ store, userLocation }) {
   const distance = userLocation
