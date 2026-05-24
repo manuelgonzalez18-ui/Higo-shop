@@ -9,45 +9,45 @@
   --higo-blue-light: #60A5FA;     /* Brand Sky Blue Highlight */
   --higo-blue-dark: #2563EB;      /* Royal Blue */
   --higo-blue-darker: #1D4ED8;    /* Dark Blue */
-  --higo-blue-50: #F0F7FF;        /* Light blue offset */
-  --higo-blue-100: #E0EFFF;
-  --higo-blue-200: #C2E0FF;
+  --higo-blue-50: #0C152B;        /* Dark Blue-gray background offset */
+  --higo-blue-100: #102144;
+  --higo-blue-200: #173266;
 
-  /* Neutrals */
-  --higo-gray-900: #0F172A;
-  --higo-gray-800: #1E293B;
-  --higo-gray-700: #334155;
-  --higo-gray-600: #475569;
-  --higo-gray-500: #64748B;
-  --higo-gray-400: #94A3B8;
-  --higo-gray-300: #CBD5E1;
-  --higo-gray-200: #E2E8F0;
-  --higo-gray-100: #F1F5F9;
-  --higo-gray-50: #F8FAFC;
-  --higo-white: #FFFFFF;
+  /* Neutrals — Premium Dark Theme (Inverted from Light) */
+  --higo-gray-900: #F8FAFC;       /* Off-white text primary */
+  --higo-gray-800: #E2E8F0;       /* Lighter text secondary */
+  --higo-gray-700: #CBD5E1;       /* Gray text standard */
+  --higo-gray-600: #94A3B8;       /* Slate text muted */
+  --higo-gray-500: #64748B;       /* Neutral gray */
+  --higo-gray-400: #475569;       /* Slate dark */
+  --higo-gray-300: #334155;       /* Deep slate */
+  --higo-gray-200: #1E293B;       /* Card border / separator line */
+  --higo-gray-100: #0F172A;       /* Secondary offset background */
+  --higo-gray-50: #0A0F1D;        /* Page deep background */
+  --higo-white: #171E30;          /* Main card container background */
 
   /* Semantic Colors */
   --higo-success: #10B981;
-  --higo-success-light: #D1FAE5;
+  --higo-success-light: rgba(16, 185, 129, 0.15); /* Translucent green overlay */
   --higo-success-dark: #059669;
   --higo-warning: #F59E0B;
-  --higo-warning-light: #FEF3C7;
+  --higo-warning-light: rgba(245, 158, 11, 0.15); /* Translucent yellow overlay */
   --higo-warning-dark: #D97706;
   --higo-error: #EF4444;
-  --higo-error-light: #FEE2E2;
+  --higo-error-light: rgba(239, 68, 68, 0.15);  /* Translucent red overlay */
   --higo-error-dark: #DC2626;
   --higo-info: #06B6D4;
-  --higo-info-light: #CFFAFE;
+  --higo-info-light: rgba(6, 182, 212, 0.15);  /* Translucent cyan overlay */
 
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  --shadow-glass: 0 8px 32px rgba(37, 99, 235, 0.08);
-  --shadow-blue: 0 4px 14px rgba(37, 99, 235, 0.25);
-  --shadow-blue-lg: 0 8px 24px rgba(37, 99, 235, 0.3);
+  /* Shadows — Adjusted for Dark Mode */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-blue: 0 4px 14px rgba(59, 130, 246, 0.25);
+  --shadow-blue-lg: 0 8px 24px rgba(59, 130, 246, 0.3);
 
   /* Border Radius */
   --radius-xs: 6px;
@@ -320,10 +320,10 @@ ul, ol {
 
 /* --- Glass Effect --- */
 .glass {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(23, 30, 48, 0.75);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* --- Mobile App Container --- */
@@ -340,6 +340,14 @@ ul, ol {
 .leaflet-container {
   font-family: var(--font-family) !important;
   border-radius: var(--radius-md);
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  filter: invert(100%) hue-rotate(180deg) brightness(105%) contrast(110%);
 }
 
 .leaflet-control-zoom a {
