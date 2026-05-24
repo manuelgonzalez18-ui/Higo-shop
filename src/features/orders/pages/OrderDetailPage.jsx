@@ -12,6 +12,7 @@ import { formatCurrency } from '../../../services/deliveryPricing.js';
 import { formatDurationMin, bearingBetween } from '../../../services/geolocation.js';
 import { useDirections } from '../../../hooks/useDirections.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
+import { useLiveDriverTracking } from '../../../hooks/useLiveDriverTracking.js';
 import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
@@ -132,6 +133,9 @@ export function OrderDetailPage() {
 
   const totalSteps = currentLeg === 'to_store' ? 10 : 12;
   const ratio = Math.min(1, legStep / totalSteps);
+
+  const { driverPos: liveDriverPos, driverBearing: liveDriverBearing, signalAgeSec } = useLiveDriverTracking(orderId, driverStartLatLng);
+
   const driverPos = useMemo(() => {
     if (!storeLatLng || !userLatLng) return null;
     if (currentLeg === 'delivered') return userLatLng;
@@ -152,6 +156,10 @@ export function OrderDetailPage() {
     const idx = Math.min(path.length - 2, Math.floor(target));
     return bearingBetween(path[idx], path[idx + 1]);
   }, [driverPos, currentLeg, legPath, ratio, legOrigin, legDest]);
+
+
+  const resolvedDriverPos = liveDriverPos || driverPos;
+  const resolvedDriverBearing = liveDriverBearing ?? driverBearing;
 
   // Live ETA = remaining fraction of Google's total leg duration.
   const remainingEtaText = useMemo(() => {
@@ -382,8 +390,8 @@ export function OrderDetailPage() {
           <TrackingMap
             storeLatLng={storeLatLng}
             userLatLng={userLatLng}
-            driverPos={driverPos}
-            driverBearing={driverBearing}
+            driverPos={resolvedDriverPos}
+            driverBearing={resolvedDriverBearing}
             currentLeg={currentLeg}
             legPath={legPath}
             fullDeliveryPath={fullDeliveryPath}
@@ -401,6 +409,14 @@ export function OrderDetailPage() {
             </div>
           )}
         </div>
+
+        
+          {signalAgeSec != null && (
+            <div className="floating-driver-eta" style={{ top: '0.75rem', bottom: 'auto' }}>
+              <Navigation size={14} />
+              <span>{signalAgeSec <= 10 ? 'Ubicación en vivo' : `Última señal hace ${signalAgeSec}s`}</span>
+            </div>
+          )}
 
         {/* FLOATING BOTTOM PANEL */}
         <div className="order-detail-bottom-panel">
