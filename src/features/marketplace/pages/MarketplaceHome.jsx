@@ -112,7 +112,7 @@ export function MarketplaceHome() {
             <div className="hero-address-row">
               <MapPin size={16} className="pin-icon" />
               <span className="hero-location-text truncate">
-                {deliveryAddress || (userLocation ? 'Caracas, Venezuela' : 'Obteniendo ubicación...')}
+                {deliveryAddress || (userLocation ? 'Higuerote, Miranda' : 'Obteniendo ubicación...')}
               </span>
               <ChevronDown size={14} className="chevron-icon" />
             </div>
