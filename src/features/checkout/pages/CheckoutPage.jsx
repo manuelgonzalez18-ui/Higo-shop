@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -8,12 +8,13 @@ import {
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
-import { mockStores } from '../../../data/stores.js';
+import { fetchStoreById } from '../../../services/storeService.js';
 import { useCartStore } from '../../../stores/useCartStore.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
 import { useOrderStore } from '../../../stores/useOrderStore.js';
 import { useDeliveryFee } from '../../../hooks/useDeliveryFee.js';
 import { formatCurrency, calculateChange } from '../../../services/deliveryPricing.js';
+import { Spinner } from '../../../components/ui/Spinner.jsx';
 import './CheckoutPage.css';
 
 // Fix Leaflet default icon issue
@@ -27,11 +28,27 @@ L.Icon.Default.mergeOptions({
 export function CheckoutPage() {
   const { storeId } = useParams();
   const navigate = useNavigate();
-  const store = mockStores.find(s => s.id === storeId);
+  
+  const [store, setStore] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const { carts, clearCart } = useCartStore();
   const { userLocation, deliveryAddress } = useLocationStore();
   const { createOrder } = useOrderStore();
   const { distance, distanceText, fee, feeText, estimatedTime } = useDeliveryFee(store?.latitude, store?.longitude);
+
+  // Fetch the store metadata dynamically from Supabase
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    fetchStoreById(storeId).then(data => {
+      if (isMounted) {
+        setStore(data);
+        setIsLoading(false);
+      }
+    });
+    return () => { isMounted = false; };
+  }, [storeId]);
 
   const [deliveryPayMethod, setDeliveryPayMethod] = useState('cash');
   const [paidWithAmount, setPaidWithAmount] = useState('');
@@ -83,6 +100,15 @@ export function CheckoutPage() {
       navigate(`/orders`, { replace: true });
     }, 800);
   };
+
+  if (isLoading) {
+    return (
+      <div className="checkout-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80dvh', gap: '16px' }}>
+        <Spinner size="lg" />
+        <p style={{ color: 'var(--higo-gray-400)' }}>Cargando detalles de pago...</p>
+      </div>
+    );
+  }
 
   if (!store || items.length === 0) {
     return (

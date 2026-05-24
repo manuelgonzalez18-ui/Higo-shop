@@ -1,16 +1,41 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus, Minus, Trash2, ShoppingBag, ArrowRight, Store } from 'lucide-react';
 import { useCartStore } from '../../../stores/useCartStore.js';
-import { mockStores } from '../../../data/stores.js';
+import { fetchStores } from '../../../services/storeService.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
+import { Spinner } from '../../../components/ui/Spinner.jsx';
 import './CartPage.css';
 
 export function CartPage() {
   const navigate = useNavigate();
   const { carts, updateQuantity, removeItem, clearCart } = useCartStore();
+  const [storesList, setStoresList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch stores to get metadata (names, etc.) for the cart sections
+  useEffect(() => {
+    let isMounted = true;
+    fetchStores().then(data => {
+      if (isMounted) {
+        setStoresList(data);
+        setIsLoading(false);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   const storeIds = Object.keys(carts).filter(id => carts[id]?.items?.length > 0);
+
+  if (isLoading) {
+    return (
+      <div className="cart-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80dvh', gap: '16px' }}>
+        <Spinner size="lg" />
+        <p style={{ color: 'var(--higo-gray-400)' }}>Cargando carrito...</p>
+      </div>
+    );
+  }
 
   if (storeIds.length === 0) {
     return (
@@ -36,7 +61,7 @@ export function CartPage() {
 
   // For now, handle first store cart (single-store checkout)
   const currentStoreId = storeIds[0];
-  const store = mockStores.find(s => s.id === currentStoreId);
+  const store = storesList.find(s => s.id === currentStoreId);
   const items = carts[currentStoreId]?.items || [];
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -50,7 +75,7 @@ export function CartPage() {
       </div>
 
       {storeIds.map(storeId => {
-        const st = mockStores.find(s => s.id === storeId);
+        const st = storesList.find(s => s.id === storeId);
         const cartItems = carts[storeId]?.items || [];
         const storeTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 

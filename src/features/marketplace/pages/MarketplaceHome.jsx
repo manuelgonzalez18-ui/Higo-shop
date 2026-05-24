@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -11,9 +11,10 @@ import {
   SearchX,
   User
 } from 'lucide-react';
-import { mockStores } from '../../../data/stores.js';
+import { fetchStores } from '../../../services/storeService.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
 import { calculateDistance, formatDistance } from '../../../services/geolocation.js';
+import { Spinner } from '../../../components/ui/Spinner.jsx';
 import './MarketplaceHome.css';
 
 const CATEGORIES = [
@@ -41,18 +42,32 @@ const fadeInUp = {
 export function MarketplaceHome() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [stores, setStores] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { userLocation } = useLocationStore();
 
+  // Load stores from Supabase (falls back to mockStores automatically)
+  useEffect(() => {
+    let isMounted = true;
+    fetchStores().then(data => {
+      if (isMounted) {
+        setStores(data);
+        setIsLoading(false);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
+
   const filteredStores = useMemo(() => {
-    let stores = [...mockStores];
+    let list = [...stores];
 
     if (activeCategory !== 'all') {
-      stores = stores.filter(s => s.category === activeCategory);
+      list = list.filter(s => s.category === activeCategory);
     }
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      stores = stores.filter(s =>
+      list = list.filter(s =>
         s.name.toLowerCase().includes(q) ||
         s.description.toLowerCase().includes(q) ||
         s.category.toLowerCase().includes(q)
@@ -148,7 +163,12 @@ export function MarketplaceHome() {
         </span>
       </div>
 
-      {filteredStores.length > 0 ? (
+      {isLoading ? (
+        <div className="empty-state" style={{ minHeight: '30vh' }}>
+          <Spinner size="lg" />
+          <p style={{ marginTop: 'var(--space-3)', color: 'var(--higo-gray-400)' }}>Buscando comercios...</p>
+        </div>
+      ) : filteredStores.length > 0 ? (
         <motion.div
           className="stores-grid"
           variants={staggerChildren}

@@ -1,13 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Star, Clock, MapPin, Plus, Minus, ShoppingBag } from 'lucide-react';
-import { mockStores } from '../../../data/stores.js';
-import { mockProducts } from '../../../data/products.js';
+import { fetchStoreById, fetchProductsByStoreId } from '../../../services/storeService.js';
 import { useCartStore } from '../../../stores/useCartStore.js';
 import { useDeliveryFee } from '../../../hooks/useDeliveryFee.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
 import { BottomSheet } from '../../../components/ui/BottomSheet.jsx';
+import { Spinner } from '../../../components/ui/Spinner.jsx';
 import './StoreView.css';
 
 const categoryEmojis = {
@@ -26,14 +26,35 @@ const productEmojis = {
 export function StoreView() {
   const { storeId } = useParams();
   const navigate = useNavigate();
-  const store = mockStores.find(s => s.id === storeId);
-  const products = mockProducts[storeId] || [];
+  const [store, setStore] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const { addItem, getCartItems, getCartTotal, getCartItemCount, updateQuantity } = useCartStore();
   const { distanceText, estimatedTime } = useDeliveryFee(store?.latitude, store?.longitude);
 
   const [activeCategory, setActiveCategory] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [addedProductId, setAddedProductId] = useState(null);
+
+  // Fetch store and products dynamically from Supabase
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+
+    Promise.all([
+      fetchStoreById(storeId),
+      fetchProductsByStoreId(storeId)
+    ]).then(([storeData, productsData]) => {
+      if (isMounted) {
+        setStore(storeData);
+        setProducts(productsData);
+        setIsLoading(false);
+      }
+    });
+
+    return () => { isMounted = false; };
+  }, [storeId]);
 
   const categories = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category))];
@@ -68,6 +89,15 @@ export function StoreView() {
     setAddedProductId(product.id);
     setTimeout(() => setAddedProductId(null), 600);
   };
+
+  if (isLoading) {
+    return (
+      <div className="store-view" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80dvh', gap: '16px' }}>
+        <Spinner size="lg" />
+        <p style={{ color: 'var(--higo-gray-400)' }}>Cargando menú...</p>
+      </div>
+    );
+  }
 
   if (!store) {
     return (
