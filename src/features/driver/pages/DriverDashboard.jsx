@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Truck, Navigation, MapPin, Store, MessageCircle, Send, Check, Phone,
@@ -7,6 +7,9 @@ import {
 import { useOrderStore } from '../../../stores/useOrderStore.js';
 import { useAuthStore } from '../../../stores/useAuthStore.js';
 import { pushDriverLocation, pushOrderEvent } from '../../../services/trackingService.js';
+import { fetchDispatchableOrdersRemote } from '../../../services/orderService.js';
+import { useRealtimeOrders } from '../../../hooks/useRealtimeOrders.js';
+import { syncOrderStatus } from '../../../services/orderRealtimeService.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
 import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
@@ -49,19 +52,42 @@ function DriverDeliveryMap({ storeLatLng, userLatLng, status }) {
 }
 
 export function DriverDashboard() {
-  const { orders, updateOrderStatus, assignDriver } = useOrderStore();
+  const { orders, updateOrderStatus, assignDriver, upsertRemoteOrder } = useOrderStore();
   const driverId = useAuthStore((s) => s.userId);
   const { chats, addMessage, initializeChat } = useChatStore();
   
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [chatInputText, setChatInputText] = useState('');
 
+  const handleRealtimeOrder = useCallback((row) => {
+    if (!row) return;
+    if (!['READY_TO_DISPATCH', 'DRIVER_ASSIGNED', 'PICKED_UP', 'DELIVERED'].includes(row.status)) return;
+    upsertRemoteOrder({
+      id: row.id,
+      status: row.status,
+      updatedAt: row.updated_at,
+      driverId: row.driver_id,
+      storeId: row.store_id,
+      deliveryAddress: row.delivery_address,
+      grandTotal: Number(row.total || 0),
+      deliveryFee: Number(row.delivery_fee || 0),
+    });
+  }, [upsertRemoteOrder]);
+
+  useRealtimeOrders({ customerId: null, onOrderUpsert: null });
+
+  useEffect(() => {
+    fetchDispatchableOrdersRemote()
+      .then((rows) => rows.forEach((o) => upsertRemoteOrder(o)))
+      .catch(() => {});
+  }, [upsertRemoteOrder]);
+
   // 1. Filter available dispatchable orders in the zone (READY_TO_DISPATCH)
   const dispatchableOrders = useMemo(() => {
     return orders.filter(o => o.status === 'READY_TO_DISPATCH');
   }, [orders]);
 
-  // 2. Filter orders assigned to this driver ('driver-carlos') that are active
+  // 2. Filter orders assigned to this authenticated driver that are active
   const myActiveOrders = useMemo(() => {
     return orders.filter(o => 
       o.driverId === driverId && 
@@ -112,6 +138,7 @@ export function DriverDashboard() {
 
   const handleAcceptDelivery = (orderId) => {
     assignDriver(orderId, driverId);
+    syncOrderStatus(orderId, 'DRIVER_ASSIGNED', driverId).catch(() => {});
     pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch(() => {});
     
     // Add greeting message
@@ -135,6 +162,7 @@ export function DriverDashboard() {
   const handlePickupPackage = (orderId) => {
     pushOrderEvent({ orderId, eventType: 'ORDER_PICKED_UP', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch(() => {});
     updateOrderStatus(orderId, 'PICKED_UP');
+    syncOrderStatus(orderId, 'PICKED_UP').catch(() => {});
     
     addMessage(orderId, 'driverMessages', {
       sender: 'driver',
@@ -145,6 +173,7 @@ export function DriverDashboard() {
   const handleDeliverPackage = (orderId) => {
     pushOrderEvent({ orderId, eventType: 'ORDER_DELIVERED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch(() => {});
     updateOrderStatus(orderId, 'DELIVERED');
+    syncOrderStatus(orderId, 'DELIVERED').catch(() => {});
     
     addMessage(orderId, 'driverMessages', {
       sender: 'driver',
@@ -231,7 +260,7 @@ export function DriverDashboard() {
                   <div className="node-details">
                     <span className="label">Comercio (Retiro)</span>
                     <strong className="name">{selectedOrder.storeName}</strong>
-                    <span className="address">Av. Francisco de Miranda, Caracas</span>
+                    <span className="address">Higuerote, Miranda</span>
                   </div>
                 </div>
                 <div className="route-line" />
