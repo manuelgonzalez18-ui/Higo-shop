@@ -9,6 +9,7 @@ import { useOrderStore } from '../../../stores/useOrderStore.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { fetchStoreById } from '../../../services/storeService.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
+import { formatDurationMin } from '../../../services/geolocation.js';
 import { useDirections } from '../../../hooks/useDirections.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
 import { GoogleMapsProvider, MapView } from '../../../components/maps/MapView.jsx';
@@ -42,39 +43,14 @@ function interpolateAlongPath(path, ratio) {
   };
 }
 
-function TrackingMap({ order, currentLeg, legStep }) {
-  const storeLatLng = useMemo(() => ({
-    lat: order.storeLocation.lat,
-    lng: order.storeLocation.lng,
-  }), [order.storeLocation.lat, order.storeLocation.lng]);
-
-  const userLatLng = useMemo(() => ({
-    lat: order.userLocation.lat,
-    lng: order.userLocation.lng,
-  }), [order.userLocation.lat, order.userLocation.lng]);
-
-  const driverStartLatLng = useMemo(() => ({
-    lat: storeLatLng.lat + 0.006,
-    lng: storeLatLng.lng - 0.008,
-  }), [storeLatLng.lat, storeLatLng.lng]);
-
-  // Active leg origin/destination
-  const legOrigin = currentLeg === 'to_store' ? driverStartLatLng : storeLatLng;
-  const legDest = currentLeg === 'to_store' ? storeLatLng : userLatLng;
-
-  const { path: legPath } = useDirections(legOrigin, legDest);
-  const { path: fullDeliveryPath } = useDirections(storeLatLng, userLatLng);
-
-  // Active leg progress
-  const totalSteps = currentLeg === 'to_store' ? 10 : 12;
-  const ratio = Math.min(1, legStep / totalSteps);
-  const driverPos = useMemo(() => {
-    if (currentLeg === 'delivered') return userLatLng;
-    if (currentLeg === 'at_store') return storeLatLng;
-    if (currentLeg === 'none') return driverStartLatLng;
-    return interpolateAlongPath(legPath || [legOrigin, legDest], ratio) || driverStartLatLng;
-  }, [currentLeg, legPath, ratio, userLatLng, storeLatLng, driverStartLatLng, legOrigin, legDest]);
-
+function TrackingMap({
+  storeLatLng,
+  userLatLng,
+  driverPos,
+  currentLeg,
+  legPath,
+  fullDeliveryPath,
+}) {
   const mapCenter = useMemo(() => ({
     lat: (userLatLng.lat + storeLatLng.lat) / 2,
     lng: (userLatLng.lng + storeLatLng.lng) / 2,
@@ -106,6 +82,14 @@ function TrackingMap({ order, currentLeg, legStep }) {
 }
 
 export function OrderDetailPage() {
+  return (
+    <GoogleMapsProvider>
+      <OrderDetailPageInner />
+    </GoogleMapsProvider>
+  );
+}
+
+function OrderDetailPageInner() {
   const { orderId } = useParams();
   const navigate = useNavigate();
 
@@ -123,6 +107,42 @@ export function OrderDetailPage() {
 
   const [currentLeg, setCurrentLeg] = useState('none');
   const [legStep, setLegStep] = useState(0);
+
+  // Geometry derived from order (safe even before order exists — guarded).
+  const storeLatLng = useMemo(() => order ? ({
+    lat: order.storeLocation.lat, lng: order.storeLocation.lng,
+  }) : null, [order?.storeLocation.lat, order?.storeLocation.lng]);
+  const userLatLng = useMemo(() => order ? ({
+    lat: order.userLocation.lat, lng: order.userLocation.lng,
+  }) : null, [order?.userLocation.lat, order?.userLocation.lng]);
+  const driverStartLatLng = useMemo(() => storeLatLng ? ({
+    lat: storeLatLng.lat + 0.006, lng: storeLatLng.lng - 0.008,
+  }) : null, [storeLatLng?.lat, storeLatLng?.lng]);
+
+  const legOrigin = currentLeg === 'to_store' ? driverStartLatLng : storeLatLng;
+  const legDest = currentLeg === 'to_store' ? storeLatLng : userLatLng;
+
+  const { path: legPath, duration: legDurationSec } = useDirections(legOrigin, legDest);
+  const { path: fullDeliveryPath } = useDirections(storeLatLng, userLatLng);
+
+  const totalSteps = currentLeg === 'to_store' ? 10 : 12;
+  const ratio = Math.min(1, legStep / totalSteps);
+  const driverPos = useMemo(() => {
+    if (!storeLatLng || !userLatLng) return null;
+    if (currentLeg === 'delivered') return userLatLng;
+    if (currentLeg === 'at_store') return storeLatLng;
+    if (currentLeg === 'none') return driverStartLatLng;
+    return interpolateAlongPath(legPath || [legOrigin, legDest], ratio) || driverStartLatLng;
+  }, [currentLeg, legPath, ratio, userLatLng, storeLatLng, driverStartLatLng, legOrigin, legDest]);
+
+  // Live ETA = remaining fraction of Google's total leg duration.
+  const remainingEtaText = useMemo(() => {
+    if (legDurationSec == null) return null;
+    if (currentLeg === 'to_store' || currentLeg === 'to_client') {
+      return formatDurationMin(legDurationSec * (1 - ratio));
+    }
+    return null;
+  }, [legDurationSec, ratio, currentLeg]);
 
   useEffect(() => {
     if (!order) return;
@@ -328,7 +348,6 @@ export function OrderDetailPage() {
   const currentStepIndex = getStepIndex(order.status);
 
   return (
-    <GoogleMapsProvider>
       <div className="order-detail-page">
         <div className="order-detail-header">
           <button className="back-btn" onClick={() => navigate('/orders')}>
@@ -342,15 +361,22 @@ export function OrderDetailPage() {
 
         {/* MAP TRACKING VIEW */}
         <div className="tracking-map-container">
-          <TrackingMap order={order} currentLeg={currentLeg} legStep={legStep} />
+          <TrackingMap
+            storeLatLng={storeLatLng}
+            userLatLng={userLatLng}
+            driverPos={driverPos}
+            currentLeg={currentLeg}
+            legPath={legPath}
+            fullDeliveryPath={fullDeliveryPath}
+          />
 
           {currentLeg !== 'none' && (
             <div className="floating-driver-eta">
               <Clock size={14} className="spinning-icon" />
               <span>
-                {currentLeg === 'to_store' && 'Repartidor en camino a la tienda...'}
+                {currentLeg === 'to_store' && `Repartidor en camino a la tienda${remainingEtaText ? ` · ${remainingEtaText}` : '...'}`}
                 {currentLeg === 'at_store' && 'Repartidor en tienda verificando pedido...'}
-                {currentLeg === 'to_client' && '¡Pedido en camino a tu dirección!'}
+                {currentLeg === 'to_client' && `¡Pedido en camino${remainingEtaText ? ` · llega en ${remainingEtaText}` : ' a tu dirección!'}`}
                 {currentLeg === 'delivered' && '¡Entregado! Disfruta tu compra'}
               </span>
             </div>
@@ -495,6 +521,5 @@ export function OrderDetailPage() {
           </div>
         </div>
       </div>
-    </GoogleMapsProvider>
   );
 }

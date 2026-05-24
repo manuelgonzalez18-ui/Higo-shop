@@ -1,10 +1,20 @@
 import { useMemo } from 'react';
 import { useLocationStore } from '../stores/useLocationStore.js';
-import { calculateDistance, formatDistance, estimateDeliveryTime } from '../services/geolocation.js';
+import {
+  calculateDistance,
+  formatDistance,
+  estimateDeliveryTime,
+  formatEtaFromSeconds,
+} from '../services/geolocation.js';
 import { calculateDeliveryFee, formatCurrency } from '../services/deliveryPricing.js';
 
-export function useDeliveryFee(storeLat, storeLon) {
+// When liveDistanceMeters / liveDurationSeconds are provided (from a Google
+// Directions response) the hook uses those for fee + ETA so pricing matches
+// the actual driving route. Otherwise it falls back to haversine + speed
+// heuristic — keeping consumers without map context working.
+export function useDeliveryFee(storeLat, storeLon, options = {}) {
   const { userLocation } = useLocationStore();
+  const { liveDistanceMeters, liveDurationSeconds } = options;
 
   return useMemo(() => {
     if (!userLocation || storeLat == null || storeLon == null) {
@@ -14,24 +24,27 @@ export function useDeliveryFee(storeLat, storeLon) {
         fee: 0,
         feeText: 'Bs. 0.00',
         estimatedTime: '--',
+        isLive: false,
       };
     }
 
-    const distance = calculateDistance(
-      userLocation.lat,
-      userLocation.lng,
-      storeLat,
-      storeLon
-    );
+    const distance = liveDistanceMeters != null
+      ? liveDistanceMeters / 1000
+      : calculateDistance(userLocation.lat, userLocation.lng, storeLat, storeLon);
 
     const fee = calculateDeliveryFee(distance);
+
+    const estimatedTime = liveDurationSeconds != null
+      ? formatEtaFromSeconds(liveDurationSeconds)
+      : estimateDeliveryTime(distance);
 
     return {
       distance,
       distanceText: formatDistance(distance),
       fee,
       feeText: formatCurrency(fee),
-      estimatedTime: estimateDeliveryTime(distance),
+      estimatedTime,
+      isLive: liveDistanceMeters != null,
     };
-  }, [userLocation, storeLat, storeLon]);
+  }, [userLocation, storeLat, storeLon, liveDistanceMeters, liveDurationSeconds]);
 }

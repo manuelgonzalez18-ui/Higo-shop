@@ -20,8 +20,7 @@ import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
 import { AddressAutocomplete } from '../../../components/maps/AddressAutocomplete.jsx';
 import './CheckoutPage.css';
 
-function CheckoutMap({ origin, destination }) {
-  const { path } = useDirections(origin, destination);
+function CheckoutMap({ origin, destination, path }) {
   const center = useMemo(() => ({
     lat: (origin.lat + destination.lat) / 2,
     lng: (origin.lng + destination.lng) / 2,
@@ -37,6 +36,14 @@ function CheckoutMap({ origin, destination }) {
 }
 
 export function CheckoutPage() {
+  return (
+    <GoogleMapsProvider>
+      <CheckoutPageInner />
+    </GoogleMapsProvider>
+  );
+}
+
+function CheckoutPageInner() {
   const { storeId } = useParams();
   const navigate = useNavigate();
 
@@ -47,7 +54,18 @@ export function CheckoutPage() {
   const { carts, clearCart } = useCartStore();
   const { userLocation, deliveryAddress, setUserLocation, setDeliveryAddress } = useLocationStore();
   const { createOrder } = useOrderStore();
-  const { distance, distanceText, fee, feeText, estimatedTime } = useDeliveryFee(store?.latitude, store?.longitude);
+
+  const directionsOrigin = userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null;
+  const directionsDest = store ? { lat: store.latitude, lng: store.longitude } : null;
+  const { path: routePath, distance: liveDistM, duration: liveDurS } = useDirections(
+    directionsOrigin,
+    directionsDest,
+  );
+  const { distance, distanceText, fee, feeText, estimatedTime } = useDeliveryFee(
+    store?.latitude,
+    store?.longitude,
+    { liveDistanceMeters: liveDistM, liveDurationSeconds: liveDurS },
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -146,8 +164,7 @@ export function CheckoutPage() {
   }
 
   return (
-    <GoogleMapsProvider>
-      <div className="checkout-page">
+    <div className="checkout-page">
         <div className="checkout-header">
           <button className="checkout-header__back" onClick={() => navigate(-1)}>
             <ArrowLeft size={20} />
@@ -196,6 +213,7 @@ export function CheckoutPage() {
               <CheckoutMap
                 origin={{ lat: userLocation.lat, lng: userLocation.lng }}
                 destination={{ lat: store.latitude, lng: store.longitude }}
+                path={routePath}
               />
             </div>
             <div className="distance-info" style={{ marginTop: 'var(--space-2)' }}>
@@ -386,7 +404,6 @@ export function CheckoutPage() {
             )}
           </motion.button>
         </div>
-      </div>
-    </GoogleMapsProvider>
+    </div>
   );
 }

@@ -95,6 +95,29 @@ export function estimateDeliveryTime(distanceKm) {
 }
 
 /**
+ * Format a real Google Directions duration (seconds) into a delivery ETA range.
+ * Adds 10 min of prep overhead on top of the driving time.
+ */
+export function formatEtaFromSeconds(seconds) {
+  if (seconds == null || isNaN(seconds)) return '--';
+  const prepMin = 10;
+  const travelMin = seconds / 60;
+  const minTime = Math.max(10, Math.round(prepMin + travelMin));
+  const maxTime = minTime + 5;
+  return `${minTime}-${maxTime} min`;
+}
+
+/**
+ * Format a driving duration (seconds) into a compact "X min" string. No prep
+ * buffer — for live tracking chips.
+ */
+export function formatDurationMin(seconds) {
+  if (seconds == null || isNaN(seconds)) return '--';
+  const min = Math.max(1, Math.round(seconds / 60));
+  return `${min} min`;
+}
+
+/**
  * Format a distance value for display.
  * @param {number} km - Distance in kilometers
  * @returns {string} Formatted distance, e.g. '1.3 km' or '800 m'
