@@ -351,148 +351,151 @@ export function OrderDetailPage() {
         )}
       </div>
 
-      {/* 2. VISUAL PROGRESS TIMELINE */}
-      <div className="timeline-container">
-        <div className="timeline-steps">
-          {STATUS_STEPS.map((step, idx) => {
-            const isCompleted = idx < currentStepIndex;
-            const isActive = idx === currentStepIndex;
-            const isPending = idx > currentStepIndex;
+      {/* FLOATING BOTTOM PANEL */}
+      <div className="order-detail-bottom-panel">
+        {/* 2. VISUAL PROGRESS TIMELINE */}
+        <div className="timeline-container">
+          <div className="timeline-steps">
+            {STATUS_STEPS.map((step, idx) => {
+              const isCompleted = idx < currentStepIndex;
+              const isActive = idx === currentStepIndex;
+              const isPending = idx > currentStepIndex;
 
-            return (
-              <div
-                key={step.id}
-                className={`timeline-step ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''} ${isPending ? 'pending' : ''}`}
-              >
-                <div className="timeline-icon">
-                  {isActive ? <span className="breathing-glow" /> : null}
-                  {step.icon}
-                </div>
-                <div className="timeline-label">{step.label}</div>
-                {idx < STATUS_STEPS.length - 1 && (
-                  <div className={`timeline-line ${idx < currentStepIndex ? 'completed' : ''}`} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 3. ORDER INFO SLIDE */}
-      <div className="order-summary-header">
-        <Store size={16} />
-        <h3>{order.storeName}</h3>
-        <span className="order-grand-total">{formatCurrency(order.grandTotal)}</span>
-      </div>
-
-      {/* 4. REALTIME CHAT CLIENT */}
-      <div className="order-chat-container">
-        {/* Chat Tabs */}
-        <div className="chat-tabs">
-          <button
-            className={`chat-tab-btn ${activeTab === 'store' ? 'active' : ''}`}
-            onClick={() => setActiveTab('store')}
-          >
-            <Store size={16} />
-            Tienda
-            {orderChat.storeMessages.length > 1 && <span className="tab-indicator" />}
-          </button>
-          <button
-            className={`chat-tab-btn ${activeTab === 'driver' ? 'active' : ''}`}
-            onClick={() => setActiveTab('driver')}
-            disabled={getStepIndex(order.status) < 4} // Disabled until driver is assigned
-          >
-            <Truck size={16} />
-            Higo Driver
-            {orderChat.driverMessages.length > 1 && <span className="tab-indicator" />}
-          </button>
-        </div>
-
-        {/* Chat Thread */}
-        <div className="chat-messages-thread">
-          <AnimatePresence initial={false}>
-            {currentMessages.map((msg) => {
-              if (msg.system) {
-                return (
-                  <div key={msg.id} className="system-chat-message">
-                    <span>{msg.text}</span>
-                  </div>
-                );
-              }
-
-              const isMe = msg.sender === 'customer';
               return (
-                <motion.div
-                  key={msg.id}
-                  className={`chat-bubble-wrapper ${isMe ? 'chat-bubble-wrapper--me' : 'chat-bubble-wrapper--other'}`}
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.2 }}
+                <div
+                  key={step.id}
+                  className={`timeline-step ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''} ${isPending ? 'pending' : ''}`}
                 >
-                  <div className={`chat-bubble ${isMe ? 'chat-bubble--me' : 'chat-bubble--other'}`}>
-                    {msg.image ? (
-                      <div className="chat-image-attachment">
-                        <img src={msg.image} alt="Adjunto de Pago" />
-                        <div className="chat-image-attachment__label">
-                          <Image size={14} /> {msg.text}
-                        </div>
-                      </div>
-                    ) : (
-                      <p>{msg.text}</p>
-                    )}
-                    <span className="chat-timestamp">
-                      {new Date(msg.timestamp).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                  <div className="timeline-icon">
+                    {isActive ? <span className="breathing-glow" /> : null}
+                    {step.icon}
                   </div>
-                </motion.div>
+                  <div className="timeline-label">{step.label}</div>
+                  {idx < STATUS_STEPS.length - 1 && (
+                    <div className={`timeline-line ${idx < currentStepIndex ? 'completed' : ''}`} />
+                  )}
+                </div>
               );
             })}
-          </AnimatePresence>
-          <div ref={chatEndRef} />
+          </div>
         </div>
 
-        {/* Dynamic Action Bar (For uploading payment capture) */}
-        {activeTab === 'store' && order.status === 'PENDING_PAYMENT' && (
-          <motion.div
-            className="payment-prompt-bar"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="payment-prompt-info">
-              <Smartphone size={16} />
-              <span>Realiza tu Pago Móvil de <strong>{formatCurrency(order.productTotal)}</strong> y reporta tu comprobante aquí.</span>
-            </div>
-            <button
-              className="payment-report-btn"
-              onClick={handleSimulatePaymentProof}
-            >
-              <Sparkles size={14} />
-              Reportar Pago (Simulado)
-            </button>
-          </motion.div>
-        )}
+        {/* 3. ORDER INFO SLIDE */}
+        <div className="order-summary-header">
+          <Store size={16} />
+          <h3>{order.storeName}</h3>
+          <span className="order-grand-total">{formatCurrency(order.grandTotal)}</span>
+        </div>
 
-        {/* Input Bar */}
-        <form className="chat-input-bar" onSubmit={handleSendMessage}>
-          <input
-            type="text"
-            placeholder={
-              activeTab === 'driver' && getStepIndex(order.status) < 4
-                ? 'Esperando asignación de Driver...'
-                : `Mensaje a ${activeTab === 'store' ? 'la tienda' : 'repartidor'}...`
-            }
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            disabled={activeTab === 'driver' && getStepIndex(order.status) < 4}
-          />
-          <button
-            type="submit"
-            className="chat-send-btn"
-            disabled={!inputText.trim() || (activeTab === 'driver' && getStepIndex(order.status) < 4)}
-          >
-            <Send size={18} />
-          </button>
-        </form>
+        {/* 4. REALTIME CHAT CLIENT */}
+        <div className="order-chat-container">
+          {/* Chat Tabs */}
+          <div className="chat-tabs">
+            <button
+              className={`chat-tab-btn ${activeTab === 'store' ? 'active' : ''}`}
+              onClick={() => setActiveTab('store')}
+            >
+              <Store size={16} />
+              Tienda
+              {orderChat.storeMessages.length > 1 && <span className="tab-indicator" />}
+            </button>
+            <button
+              className={`chat-tab-btn ${activeTab === 'driver' ? 'active' : ''}`}
+              onClick={() => setActiveTab('driver')}
+              disabled={getStepIndex(order.status) < 4} // Disabled until driver is assigned
+            >
+              <Truck size={16} />
+              Higo Driver
+              {orderChat.driverMessages.length > 1 && <span className="tab-indicator" />}
+            </button>
+          </div>
+
+          {/* Chat Thread */}
+          <div className="chat-messages-thread">
+            <AnimatePresence initial={false}>
+              {currentMessages.map((msg) => {
+                if (msg.system) {
+                  return (
+                    <div key={msg.id} className="system-chat-message">
+                      <span>{msg.text}</span>
+                    </div>
+                  );
+                }
+
+                const isMe = msg.sender === 'customer';
+                return (
+                  <motion.div
+                    key={msg.id}
+                    className={`chat-bubble-wrapper ${isMe ? 'chat-bubble-wrapper--me' : 'chat-bubble-wrapper--other'}`}
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className={`chat-bubble ${isMe ? 'chat-bubble--me' : 'chat-bubble--other'}`}>
+                      {msg.image ? (
+                        <div className="chat-image-attachment">
+                          <img src={msg.image} alt="Adjunto de Pago" />
+                          <div className="chat-image-attachment__label">
+                            <Image size={14} /> {msg.text}
+                          </div>
+                        </div>
+                      ) : (
+                        <p>{msg.text}</p>
+                      )}
+                      <span className="chat-timestamp">
+                        {new Date(msg.timestamp).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Dynamic Action Bar (For uploading payment capture) */}
+          {activeTab === 'store' && order.status === 'PENDING_PAYMENT' && (
+            <motion.div
+              className="payment-prompt-bar"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="payment-prompt-info">
+                <Smartphone size={16} />
+                <span>Realiza tu Pago Móvil de <strong>{formatCurrency(order.productTotal)}</strong> y reporta tu comprobante aquí.</span>
+              </div>
+              <button
+                className="payment-report-btn"
+                onClick={handleSimulatePaymentProof}
+              >
+                <Sparkles size={14} />
+                Reportar Pago (Simulado)
+              </button>
+            </motion.div>
+          )}
+
+          {/* Input Bar */}
+          <form className="chat-input-bar" onSubmit={handleSendMessage}>
+            <input
+              type="text"
+              placeholder={
+                activeTab === 'driver' && getStepIndex(order.status) < 4
+                  ? 'Esperando asignación de Driver...'
+                  : `Mensaje a ${activeTab === 'store' ? 'la tienda' : 'repartidor'}...`
+              }
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              disabled={activeTab === 'driver' && getStepIndex(order.status) < 4}
+            />
+            <button
+              type="submit"
+              className="chat-send-btn"
+              disabled={!inputText.trim() || (activeTab === 'driver' && getStepIndex(order.status) < 4)}
+            >
+              <Send size={18} />
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
