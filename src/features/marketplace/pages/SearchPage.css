@@ -1,0 +1,305 @@
+.search-page {
+  min-height: 100dvh;
+  background: var(--higo-white);
+  padding-bottom: calc(var(--bottom-nav-height) + var(--space-8));
+}
+
+.search-page__bar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  padding: var(--space-3) var(--space-4);
+  background: var(--higo-white);
+  border-bottom: 1px solid var(--higo-gray-100);
+}
+
+.search-page__input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--higo-gray-100);
+  border-radius: var(--radius-full);
+  padding: var(--space-3) var(--space-4);
+  color: var(--higo-gray-700);
+}
+
+.search-page__input input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.95rem;
+  color: var(--higo-gray-900);
+}
+
+.search-page__input input::placeholder {
+  color: var(--higo-gray-600);
+}
+
+.search-page__clear {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--higo-gray-300);
+  color: var(--higo-gray-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+
+/* Browse content */
+.search-page__browse {
+  padding-top: var(--space-4);
+}
+
+.search-section {
+  margin-bottom: var(--space-6);
+}
+
+.search-section__title {
+  font-size: 1rem;
+  font-weight: var(--weight-extrabold);
+  color: var(--higo-gray-700);
+  padding: 0 var(--space-4) var(--space-2);
+}
+
+/* Come sano horizontal scroll */
+.healthy-scroll {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding: var(--space-1) var(--space-4) var(--space-2);
+  scroll-snap-type: x mandatory;
+}
+
+.healthy-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.healthy-card {
+  flex: 0 0 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--higo-gray-100);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  border: none;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.healthy-card:active {
+  transform: scale(0.96);
+}
+
+.healthy-card__emoji {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.healthy-card__label {
+  font-size: 0.75rem;
+  font-weight: var(--weight-semibold);
+  color: var(--higo-gray-900);
+  text-align: center;
+  line-height: var(--leading-snug);
+}
+
+/* Main categories list */
+.main-categories {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--higo-gray-100);
+}
+
+.main-category-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--higo-gray-100);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.main-category-row:hover {
+  background: var(--higo-gray-50);
+}
+
+.main-category-row__emoji {
+  font-size: 1.6rem;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--higo-gray-100);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.main-category-row__label {
+  font-size: 1rem;
+  font-weight: var(--weight-semibold);
+  color: var(--higo-gray-900);
+}
+
+/* Popular stores cards */
+.popular-stores {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+}
+
+.popular-store-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--higo-gray-50);
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--higo-gray-100);
+  transition: background var(--transition-fast);
+}
+
+.popular-store-card:hover {
+  background: var(--higo-gray-100);
+}
+
+.popular-store-card__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.popular-store-card__avatar--restaurant { background: linear-gradient(135deg, #FFEBEB 0%, #FFB3B3 100%); }
+.popular-store-card__avatar--pharmacy { background: linear-gradient(135deg, #E6F7ED 0%, #9EE4B9 100%); }
+.popular-store-card__avatar--bakery { background: linear-gradient(135deg, #FEF7E0 0%, #FCD366 100%); }
+.popular-store-card__avatar--grocery { background: linear-gradient(135deg, #F3E8FF 0%, #C084FC 100%); }
+.popular-store-card__avatar--cafe { background: linear-gradient(135deg, #E0F2FE 0%, #38BDF8 100%); }
+
+.popular-store-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.popular-store-card__name {
+  font-size: 0.9rem;
+  font-weight: var(--weight-bold);
+  color: var(--higo-gray-900);
+}
+
+.popular-store-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--higo-gray-600);
+  margin-top: 2px;
+}
+
+/* Search results (when typing) */
+.search-results {
+  padding: var(--space-3) var(--space-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.search-results__count {
+  font-size: 0.72rem;
+  color: var(--higo-gray-600);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-2);
+}
+
+.search-result-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--higo-white);
+  border: 1px solid var(--higo-gray-100);
+  color: inherit;
+  text-decoration: none;
+}
+
+.search-result-row__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.search-result-row__avatar--restaurant { background: linear-gradient(135deg, #FFEBEB 0%, #FFB3B3 100%); }
+.search-result-row__avatar--pharmacy { background: linear-gradient(135deg, #E6F7ED 0%, #9EE4B9 100%); }
+.search-result-row__avatar--bakery { background: linear-gradient(135deg, #FEF7E0 0%, #FCD366 100%); }
+.search-result-row__avatar--grocery { background: linear-gradient(135deg, #F3E8FF 0%, #C084FC 100%); }
+.search-result-row__avatar--cafe { background: linear-gradient(135deg, #E0F2FE 0%, #38BDF8 100%); }
+
+.search-result-row__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-result-row__name {
+  font-size: 0.95rem;
+  font-weight: var(--weight-bold);
+  color: var(--higo-gray-900);
+}
+
+.search-result-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--higo-gray-600);
+  margin: 2px 0;
+}
+
+.search-result-row__address {
+  font-size: 0.72rem;
+  color: var(--higo-gray-500);
+}
+
+.search-loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-8) 0;
+}
+
+.search-empty {
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
+  color: var(--higo-gray-600);
+}
+
+.search-empty h3 {
+  font-size: var(--font-lg);
+  font-weight: var(--weight-bold);
+  color: var(--higo-gray-900);
+  margin-bottom: var(--space-2);
+}

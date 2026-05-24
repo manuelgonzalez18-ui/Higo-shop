@@ -3,43 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Store, Truck, MapPin, Navigation, Clock,
-  MessageCircle, Send, ShieldAlert, Image, Check, Smartphone, Sparkles
+  MessageCircle, Send, ShieldAlert, Image, Check, Smartphone, Sparkles, Bike
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
-import L from 'leaflet';
+import { GoogleMap, OverlayView, Polyline } from '@react-google-maps/api';
+import { useGoogleMaps, DEFAULT_MAP_OPTIONS } from '../../../services/googleMaps.js';
 import { useOrderStore } from '../../../stores/useOrderStore.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { fetchStoreById } from '../../../services/storeService.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
 import './OrderDetailPage.css';
-
-// Fix Leaflet default icon issues
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
-
-// Custom icons using Emojis for high visual premium appeal
-const userIcon = L.divIcon({
-  html: '<div style="font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">📍</div>',
-  iconSize: [30, 30],
-  iconAnchor: [15, 30]
-});
-
-const storeIcon = L.divIcon({
-  html: '<div style="font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🏪</div>',
-  iconSize: [30, 30],
-  iconAnchor: [15, 30]
-});
-
-const driverIcon = L.divIcon({
-  html: '<div style="font-size: 28px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); animation: bounce 1s infinite alternate;">🛵</div>',
-  iconSize: [36, 36],
-  iconAnchor: [18, 36]
-});
 
 const STATUS_STEPS = [
   { id: 'PENDING_PAYMENT', label: 'Pago', icon: '💳' },
@@ -54,7 +27,9 @@ const STATUS_STEPS = [
 export function OrderDetailPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
-  
+  const { isLoaded } = useGoogleMaps();
+  const mapRef = useRef(null);
+
   const { getOrderById, updateOrderStatus } = useOrderStore();
   const { chats, initializeChat, addMessage } = useChatStore();
   
@@ -358,56 +333,96 @@ export function OrderDetailPage() {
 
       {/* 1. MAP TRACKING VIEW */}
       <div className="tracking-map-container">
-        <MapContainer
-          center={mapCenter}
-          zoom={14}
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={false}
-          attributionControl={false}
-        >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          
-          {/* User Location */}
-          <Marker position={[order.userLocation.lat, order.userLocation.lng]} icon={userIcon}>
-            <Popup>📍 Tu ubicación: {order.deliveryAddress}</Popup>
-          </Marker>
+        {isLoaded ? (
+          <GoogleMap
+            mapContainerStyle={{ width: '100%', height: '100%' }}
+            center={{ lat: mapCenter[0], lng: mapCenter[1] }}
+            zoom={14}
+            options={DEFAULT_MAP_OPTIONS}
+            onLoad={(m) => {
+              mapRef.current = m;
+              const bounds = new window.google.maps.LatLngBounds();
+              bounds.extend({ lat: order.storeLocation.lat, lng: order.storeLocation.lng });
+              bounds.extend({ lat: order.userLocation.lat, lng: order.userLocation.lng });
+              if (driverPos) bounds.extend(driverPos);
+              m.fitBounds(bounds, { top: 100, right: 60, bottom: 360, left: 60 });
+            }}
+          >
+            {/* User home pin */}
+            <OverlayView
+              position={{ lat: order.userLocation.lat, lng: order.userLocation.lng }}
+              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+            >
+              <div className="track-pin track-pin--home">
+                <MapPin size={16} />
+              </div>
+            </OverlayView>
 
-          {/* Store Location */}
-          <Marker position={[order.storeLocation.lat, order.storeLocation.lng]} icon={storeIcon}>
-            <Popup>🏪 {order.storeName}</Popup>
-          </Marker>
+            {/* Store pin */}
+            <OverlayView
+              position={{ lat: order.storeLocation.lat, lng: order.storeLocation.lng }}
+              mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+            >
+              <div className="track-pin track-pin--store">
+                <Store size={16} />
+              </div>
+            </OverlayView>
 
-          {/* Dynamic Polylines based on real-time leg */}
-          {currentLeg === 'to_store' ? (
-            <Polyline
-              positions={[
-                [startLat, startLng],
-                [storeLat, storeLng],
-              ]}
-              color="var(--higo-success)"
-              weight={4}
-              opacity={0.8}
-              dashArray="6, 8"
-            />
-          ) : (
-            <Polyline
-              positions={[
-                [storeLat, storeLng],
-                [order.userLocation.lat, order.userLocation.lng],
-              ]}
-              color="var(--higo-gray-900)"
-              weight={4}
-              opacity={0.7}
-            />
-          )}
+            {/* Dynamic Polylines */}
+            {currentLeg === 'to_store' ? (
+              <Polyline
+                path={[
+                  { lat: startLat, lng: startLng },
+                  { lat: storeLat, lng: storeLng },
+                ]}
+                options={{
+                  strokeColor: '#06C167',
+                  strokeOpacity: 0,
+                  icons: [{
+                    icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, strokeColor: '#06C167', scale: 4 },
+                    offset: '0',
+                    repeat: '14px',
+                  }],
+                }}
+              />
+            ) : (
+              <Polyline
+                path={[
+                  { lat: storeLat, lng: storeLng },
+                  { lat: order.userLocation.lat, lng: order.userLocation.lng },
+                ]}
+                options={{
+                  strokeColor: '#111111',
+                  strokeOpacity: 0,
+                  icons: [{
+                    icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, strokeColor: '#111111', scale: 4 },
+                    offset: '0',
+                    repeat: '14px',
+                  }],
+                }}
+              />
+            )}
 
-          {/* Driver Location Marker */}
-          {driverPos && (
-            <Marker position={[driverPos.lat, driverPos.lng]} icon={driverIcon}>
-              <Popup>🛵 Carlos Mendoza (Higo Driver)</Popup>
-            </Marker>
-          )}
-        </MapContainer>
+            {/* Driver pin */}
+            {driverPos && (
+              <OverlayView
+                position={driverPos}
+                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              >
+                <div className="track-pin track-pin--driver">
+                  <div className="track-pin__pulse" />
+                  <div className="track-pin__driver-icon">
+                    <Bike size={18} />
+                  </div>
+                </div>
+              </OverlayView>
+            )}
+          </GoogleMap>
+        ) : (
+          <div className="tracking-map-fallback">
+            <Spinner size="lg" />
+          </div>
+        )}
 
         {/* Floating Leg Status Card */}
         {currentLeg !== 'none' && (

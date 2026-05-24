@@ -6,8 +6,8 @@ import {
   CreditCard, Banknote, Smartphone, Copy, Check,
   Navigation, Clock, ShoppingBag, Send
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
-import L from 'leaflet';
+import { GoogleMap, OverlayView, Polyline } from '@react-google-maps/api';
+import { useGoogleMaps, DEFAULT_MAP_OPTIONS } from '../../../services/googleMaps.js';
 import { fetchStoreById } from '../../../services/storeService.js';
 import { useCartStore } from '../../../stores/useCartStore.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
@@ -17,18 +17,11 @@ import { formatCurrency, calculateChange } from '../../../services/deliveryPrici
 import { Spinner } from '../../../components/ui/Spinner.jsx';
 import './CheckoutPage.css';
 
-// Fix Leaflet default icon issue
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
-
 export function CheckoutPage() {
   const { storeId } = useParams();
   const navigate = useNavigate();
-  
+  const { isLoaded } = useGoogleMaps();
+
   const [store, setStore] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -160,31 +153,54 @@ export function CheckoutPage() {
             <span className="checkout-address__text">{deliveryAddress}</span>
           </div>
           <div className="checkout-map">
-            <MapContainer
-              center={mapCenter}
-              zoom={14}
-              style={{ height: '100%', width: '100%' }}
-              zoomControl={false}
-              attributionControl={false}
-            >
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={[userLocation.lat, userLocation.lng]}>
-                <Popup>📍 Tu ubicación</Popup>
-              </Marker>
-              <Marker position={[store.latitude, store.longitude]}>
-                <Popup>🏪 {store.name}</Popup>
-              </Marker>
-              <Polyline
-                positions={[
-                  [userLocation.lat, userLocation.lng],
-                  [store.latitude, store.longitude],
-                ]}
-                color="#2563EB"
-                weight={3}
-                opacity={0.7}
-                dashArray="8, 8"
-              />
-            </MapContainer>
+            {isLoaded ? (
+              <GoogleMap
+                mapContainerStyle={{ width: '100%', height: '100%' }}
+                center={{ lat: mapCenter[0], lng: mapCenter[1] }}
+                zoom={14}
+                options={DEFAULT_MAP_OPTIONS}
+                onLoad={(m) => {
+                  const bounds = new window.google.maps.LatLngBounds();
+                  bounds.extend({ lat: userLocation.lat, lng: userLocation.lng });
+                  bounds.extend({ lat: store.latitude, lng: store.longitude });
+                  m.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+                }}
+              >
+                <OverlayView
+                  position={{ lat: userLocation.lat, lng: userLocation.lng }}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                >
+                  <div className="checkout-map-pin checkout-map-pin--home">
+                    <MapPin size={14} />
+                  </div>
+                </OverlayView>
+                <OverlayView
+                  position={{ lat: store.latitude, lng: store.longitude }}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                >
+                  <div className="checkout-map-pin checkout-map-pin--store">
+                    <Store size={14} />
+                  </div>
+                </OverlayView>
+                <Polyline
+                  path={[
+                    { lat: userLocation.lat, lng: userLocation.lng },
+                    { lat: store.latitude, lng: store.longitude },
+                  ]}
+                  options={{
+                    strokeColor: '#111111',
+                    strokeOpacity: 0,
+                    icons: [{
+                      icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, strokeColor: '#111111', scale: 3 },
+                      offset: '0',
+                      repeat: '12px',
+                    }],
+                  }}
+                />
+              </GoogleMap>
+            ) : (
+              <div className="checkout-map__loading"><Spinner size="md" /></div>
+            )}
           </div>
           <div className="distance-info" style={{ marginTop: 'var(--space-2)' }}>
             <Navigation size={15} />

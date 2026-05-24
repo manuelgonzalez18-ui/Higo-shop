@@ -109,7 +109,7 @@
   /* Layout */
   --app-max-width: 480px;
   --header-height: 56px;
-  --bottom-nav-height: 64px;
+  --bottom-nav-height: 88px;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 

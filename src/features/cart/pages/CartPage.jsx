@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, Minus, Trash2, ShoppingBag, Store, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Trash2, ShoppingBag, Store, AlertTriangle, ClipboardList, MoreHorizontal } from 'lucide-react';
 import { useCartStore } from '../../../stores/useCartStore.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
 import { fetchStores } from '../../../services/storeService.js';
@@ -44,10 +44,11 @@ export function CartPage() {
     return (
       <div className="cart-page">
         <div className="cart-header">
-          <button className="cart-header__back" onClick={() => navigate(-1)}>
-            <ArrowLeft size={20} />
-          </button>
           <h1>Carritos</h1>
+          <Link to="/orders" className="cart-header__orders-btn" id="header-orders-btn">
+            <ClipboardList size={16} />
+            Pedidos
+          </Link>
         </div>
         <div className="cart-empty">
           <ShoppingBag size={64} strokeWidth={1.2} />
@@ -65,10 +66,11 @@ export function CartPage() {
   return (
     <div className="cart-page">
       <div className="cart-header">
-        <button className="cart-header__back" onClick={() => navigate(-1)}>
-          <ArrowLeft size={20} />
-        </button>
         <h1>Carritos</h1>
+        <Link to="/orders" className="cart-header__orders-btn" id="header-orders-btn">
+          <ClipboardList size={16} />
+          Pedidos
+        </Link>
       </div>
 
       <div className="carts-container">
@@ -83,8 +85,17 @@ export function CartPage() {
             : 0;
           const isFar = distance > 8; // 8km limit for delivery warning
 
+          const itemCount = cartItems.reduce((s, i) => s + i.quantity, 0);
+
           return (
             <div key={storeId} className="cart-merchant-card animate-fade-in-up">
+              {/* Distance warning chip on top */}
+              {isFar && (
+                <div className="cart-distance-chip">
+                  Parece que estás lejos de esta tienda
+                </div>
+              )}
+
               {/* Merchant Title & Emoji */}
               <div className="cart-merchant-header">
                 <div className={`cart-merchant-emoji-bg cart-merchant-emoji-bg--${store?.category || 'restaurant'}`}>
@@ -92,17 +103,17 @@ export function CartPage() {
                 </div>
                 <div className="cart-merchant-title-col">
                   <h3>{store?.name || 'Cargando comercio...'}</h3>
-                  <span className="cart-merchant-address truncate">{store?.address}</span>
+                  <span className="cart-merchant-summary-line">
+                    {itemCount} {itemCount === 1 ? 'artículo' : 'artículos'} · {formatCurrency(cartTotal)}
+                  </span>
+                  <span className="cart-merchant-address truncate">
+                    Entregar en {store?.address?.split(',')[0] || 'tu dirección'}
+                  </span>
                 </div>
+                <button className="cart-merchant-more" aria-label="Más opciones">
+                  <MoreHorizontal size={18} />
+                </button>
               </div>
-
-              {/* Distance Warning banner */}
-              {isFar && (
-                <div className="cart-distance-warning">
-                  <AlertTriangle size={15} />
-                  <span>⚠️ Parece que estás lejos de esta tienda</span>
-                </div>
-              )}
 
               {/* Cart Items List */}
               <div className="cart-merchant-items">
@@ -172,7 +183,7 @@ export function CartPage() {
                   className="btn-merchant-checkout"
                   id={`checkout-store-${storeId}`}
                 >
-                  Ve al carrito ({formatCurrency(cartTotal)})
+                  Ve el carrito
                 </Link>
                 <Link
                   to={`/store/${storeId}`}

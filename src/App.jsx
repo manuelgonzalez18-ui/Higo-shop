@@ -1,13 +1,15 @@
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell.jsx';
 import { MarketplaceHome } from './features/marketplace/pages/MarketplaceHome.jsx';
-import { SearchMap } from './features/marketplace/pages/SearchMap.jsx';
+import { SearchPage } from './features/marketplace/pages/SearchPage.jsx';
+import { LiveDriverMap } from './features/marketplace/pages/LiveDriverMap.jsx';
 import { StoreView } from './features/marketplace/pages/StoreView.jsx';
 import { CartPage } from './features/cart/pages/CartPage.jsx';
 import { CheckoutPage } from './features/checkout/pages/CheckoutPage.jsx';
 import { OrdersPage } from './features/orders/pages/OrdersPage.jsx';
 import { OrderDetailPage } from './features/orders/pages/OrderDetailPage.jsx';
 import { ProfilePage } from './features/profile/pages/ProfilePage.jsx';
+import { SettingsPage } from './features/profile/pages/SettingsPage.jsx';
 import { MerchantDashboard } from './features/merchant/pages/MerchantDashboard.jsx';
 import { DriverDashboard } from './features/driver/pages/DriverDashboard.jsx';
 import { useAuthStore } from './stores/useAuthStore.js';
@@ -24,13 +26,15 @@ export default function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<HomeSelector />} />
-        <Route path="/search" element={<SearchMap />} />
+        <Route path="/map" element={<LiveDriverMap />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="/store/:storeId" element={<StoreView />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout/:storeId" element={<CheckoutPage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/orders/:orderId" element={<OrderDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/settings" element={<SettingsPage />} />
       </Route>
     </Routes>
   );

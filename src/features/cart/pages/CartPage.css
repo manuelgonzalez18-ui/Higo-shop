@@ -20,32 +20,35 @@
   z-index: var(--z-sticky);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-4);
   background: var(--higo-white);
-  border-bottom: 1px solid var(--higo-gray-100);
-}
-
-.cart-header__back {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--higo-gray-900);
-  background: var(--higo-gray-100);
-  transition: background var(--transition-fast);
-}
-
-.cart-header__back:hover {
-  background: var(--higo-gray-200);
 }
 
 .cart-header h1 {
-  font-size: var(--font-xl);
+  font-size: 2rem;
   font-weight: var(--weight-extrabold);
   color: var(--higo-gray-900);
+  line-height: 1;
+}
+
+.cart-header__orders-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--higo-gray-100);
+  color: var(--higo-gray-900);
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+  transition: background var(--transition-fast);
+}
+
+.cart-header__orders-btn:hover {
+  background: var(--higo-gray-200);
 }
 
 /* Container */
@@ -65,13 +68,49 @@
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
+}
+
+.cart-distance-chip {
+  align-self: flex-start;
+  background: var(--higo-gray-100);
+  color: var(--higo-gray-700);
+  font-size: 0.72rem;
+  font-weight: var(--weight-semibold);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
 }
 
 .cart-merchant-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
+}
+
+.cart-merchant-summary-line {
+  font-size: 0.85rem;
+  font-weight: var(--weight-bold);
+  color: var(--higo-gray-900);
+  display: block;
+}
+
+.cart-merchant-more {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--higo-gray-500);
+  cursor: pointer;
+}
+
+.cart-merchant-more:hover {
+  background: var(--higo-gray-100);
+  color: var(--higo-gray-900);
 }
 
 .cart-merchant-emoji-bg {
