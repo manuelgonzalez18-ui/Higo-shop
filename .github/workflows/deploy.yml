@@ -158,6 +158,7 @@ jobs:
           set mirror:parallel-transfer-count 1;
           open -u '$FTP_USERNAME','$FTP_PASSWORD' '$FTP_SERVER';
           mirror --reverse --verbose --parallel=1 --no-perms --ignore-time --exclude-glob .ftp-deploy-sync-state.json --exclude '(^|\/)\.builds(\/|$)' ./dist/ ./;
+          put ./dist/index.html -o index.html;
           " || [ $attempt -ge $max ]; do
             attempt=$((attempt + 1))
             echo "::warning::lftp mirror falló (intento $attempt/$max). Reintentando en 15s..."
