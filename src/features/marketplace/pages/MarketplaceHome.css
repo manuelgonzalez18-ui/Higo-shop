@@ -356,6 +356,24 @@
   padding: 0 var(--space-4) var(--space-8);
 }
 
+.store-card-skeleton {
+  height: 120px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--higo-gray-100) 0%,
+    var(--higo-gray-200) 50%,
+    var(--higo-gray-100) 100%
+  );
+  background-size: 200% 100%;
+  animation: higo-card-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes higo-card-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Store Feed Card */
 .store-feed-card {
   display: flex;

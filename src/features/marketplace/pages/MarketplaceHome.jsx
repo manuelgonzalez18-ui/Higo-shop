@@ -17,7 +17,6 @@ import { useOrderStore } from '../../../stores/useOrderStore.js';
 import { calculateDistance, formatDistance } from '../../../services/geolocation.js';
 import { AddressPickerSheet } from '../../../components/address/AddressPickerSheet.jsx';
 import { NotificationsPopover } from '../components/NotificationsPopover.jsx';
-import { Spinner } from '../../../components/ui/Spinner.jsx';
 import './MarketplaceHome.css';
 
 const ACTIVE_ORDER_STATUSES = [
@@ -224,9 +223,10 @@ export function MarketplaceHome() {
 
       {/* Store Feed */}
       {isLoading ? (
-        <div className="empty-state" style={{ minHeight: '20vh' }}>
-          <Spinner size="lg" />
-          <p style={{ marginTop: 'var(--space-3)', color: 'var(--higo-gray-500)' }}>Cargando comercios de Caracas...</p>
+        <div className="stores-feed" aria-label="Cargando comercios">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="store-card-skeleton" />
+          ))}
         </div>
       ) : filteredStores.length > 0 ? (
         <motion.div
