@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell.jsx';
 import { GoogleMapsProvider } from './components/maps/MapView.jsx';
+import { RouteErrorBoundary } from './components/layout/RouteErrorBoundary.jsx';
 import { Spinner } from './components/ui/Spinner.jsx';
 import { useAuthStore } from './stores/useAuthStore.js';
 
@@ -62,20 +63,22 @@ function RouteFallback() {
 export default function App() {
   return (
     <GoogleMapsProvider>
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<HomeSelector />} />
-            <Route path="/search" element={<SearchMap />} />
-            <Route path="/store/:storeId" element={<StoreView />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/checkout/:storeId" element={<CheckoutPage />} />
-            <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/orders/:orderId" element={<OrderDetailPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-          </Route>
-        </Routes>
-      </Suspense>
+      <RouteErrorBoundary>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="/" element={<HomeSelector />} />
+              <Route path="/search" element={<SearchMap />} />
+              <Route path="/store/:storeId" element={<StoreView />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/checkout/:storeId" element={<CheckoutPage />} />
+              <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </RouteErrorBoundary>
     </GoogleMapsProvider>
   );
 }
