@@ -13,6 +13,7 @@ import { formatDurationMin, bearingBetween } from '../../../services/geolocation
 import { useDirections } from '../../../hooks/useDirections.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
 import { useLiveDriverTracking } from '../../../hooks/useLiveDriverTracking.js';
+import { useOrderEvents } from '../../../hooks/useOrderEvents.js';
 import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
@@ -278,6 +279,7 @@ export function OrderDetailPage() {
     );
   }
 
+  const orderEvents = useOrderEvents(orderId);
   const orderChat = chats[orderId] || { storeMessages: [], driverMessages: [] };
   const currentMessages = activeTab === 'store' ? orderChat.storeMessages : orderChat.driverMessages;
 
@@ -442,6 +444,16 @@ export function OrderDetailPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+
+          <div style={{ marginBottom: '0.6rem' }}>
+            <strong style={{ fontSize: '0.9rem' }}>Eventos en vivo</strong>
+            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+              {orderEvents.slice(0, 3).map((evt) => (
+                <span key={evt.id} className="status-pill" style={{ fontSize: '0.72rem' }}>{evt.event_type}</span>
+              ))}
             </div>
           </div>
 
