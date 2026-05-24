@@ -229,6 +229,7 @@ export function MarketplaceHome() {
       <AddressPickerSheet
         isOpen={isAddressPickerOpen}
         currentAddress={deliveryAddress}
+        showSavedLocations
         onClose={() => setIsAddressPickerOpen(false)}
         onSelect={(place) => {
           setUserLocation({ lat: place.lat, lng: place.lng });

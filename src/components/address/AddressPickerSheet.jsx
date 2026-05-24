@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, LocateFixed } from 'lucide-react';
+import { X, LocateFixed, Home, Briefcase, Heart, MapPin } from 'lucide-react';
 import { useMapsLibrary } from '@vis.gl/react-google-maps';
 import { AddressAutocomplete } from '../maps/AddressAutocomplete.jsx';
 import { getCurrentPosition } from '../../services/geolocation.js';
+import { useLocationStore } from '../../stores/useLocationStore.js';
 import './AddressPickerSheet.css';
+
+const SAVED_ICONS = { home: Home, work: Briefcase, fav: Heart, pin: MapPin };
 
 // Reusable bottom-sheet for picking a delivery address. Wraps the Places
 // autocomplete + a one-tap "use my current location" reverse-geocode flow.
@@ -15,10 +18,12 @@ export function AddressPickerSheet({
   currentAddress,
   onClose,
   onSelect,
+  showSavedLocations = false,
 }) {
   const [draft, setDraft] = useState(currentAddress || '');
   const [isLocating, setIsLocating] = useState(false);
   const geocodingLib = useMapsLibrary('geocoding');
+  const savedLocations = useLocationStore((s) => s.savedLocations);
 
   useEffect(() => {
     if (isOpen) setDraft(currentAddress || '');
@@ -88,6 +93,29 @@ export function AddressPickerSheet({
                 <LocateFixed size={16} className={isLocating ? 'spinning-icon' : ''} />
                 {isLocating ? 'Obteniendo ubicación...' : 'Usar mi ubicación actual'}
               </button>
+
+              {showSavedLocations && savedLocations.length > 0 && (
+                <div className="address-picker-saved">
+                  <div className="address-picker-saved__label">Tus lugares</div>
+                  <div className="address-picker-saved__list">
+                    {savedLocations.map((loc) => {
+                      const Icon = SAVED_ICONS[loc.iconKey] || MapPin;
+                      return (
+                        <button
+                          key={loc.id}
+                          className="address-picker-saved__item"
+                          onClick={() => onSelect({ address: loc.address, lat: loc.lat, lng: loc.lng })}
+                          type="button"
+                        >
+                          <Icon size={16} />
+                          <span className="address-picker-saved__alias">{loc.alias}</span>
+                          <span className="address-picker-saved__addr truncate">{loc.address}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </>
