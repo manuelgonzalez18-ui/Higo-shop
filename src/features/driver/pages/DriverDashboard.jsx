@@ -172,7 +172,7 @@ export function DriverDashboard() {
             <span className="val">{stats.trips}</span>
           </div>
           <div className="stat-card stat-card--earnings">
-            <span className="label">Gagancias</span>
+            <span className="label">Ganancias</span>
             <span className="val">{formatCurrency(stats.earnings)}</span>
           </div>
         </div>
