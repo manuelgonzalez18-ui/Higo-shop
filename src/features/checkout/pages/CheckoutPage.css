@@ -86,6 +86,54 @@
   flex: 1;
 }
 
+.checkout-address {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.checkout-address:hover {
+  background: var(--higo-blue-100);
+}
+
+.address-edit-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.address-autocomplete-input {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--higo-gray-300);
+  border-radius: var(--radius-sm);
+  background: var(--higo-gray-100);
+  color: var(--higo-gray-900);
+  font-size: var(--font-sm);
+  font-family: var(--font-family);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.address-autocomplete-input:focus {
+  border-color: var(--higo-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.address-edit-cancel {
+  align-self: flex-end;
+  background: transparent;
+  border: none;
+  color: var(--higo-gray-600);
+  font-size: var(--font-xs);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+}
+
+.address-edit-cancel:hover {
+  color: var(--higo-gray-800);
+}
+
 /* Map */
 .checkout-map {
   height: 180px;

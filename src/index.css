@@ -336,19 +336,35 @@ ul, ol {
   box-shadow: 0 0 60px rgba(0, 0, 0, 0.06);
 }
 
-/* --- Leaflet Map Overrides --- */
-.leaflet-container {
-  font-family: var(--font-family) !important;
+/* --- Google Maps Marker Animation --- */
+@keyframes higo-marker-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Google Places Autocomplete dropdown — match dark theme */
+.pac-container {
+  background: var(--higo-white);
+  border: 1px solid var(--higo-gray-300);
   border-radius: var(--radius-md);
-  z-index: 1;
-  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font-family);
+  margin-top: 4px;
+  z-index: 9999;
 }
-
-.leaflet-marker-icon,
-.leaflet-marker-shadow {
-  filter: invert(100%) hue-rotate(180deg) brightness(105%) contrast(110%);
+.pac-item {
+  padding: 10px 12px;
+  border-top: 1px solid var(--higo-gray-200);
+  color: var(--higo-gray-700);
+  cursor: pointer;
 }
-
-.leaflet-control-zoom a {
-  border-radius: var(--radius-sm) !important;
+.pac-item:first-child { border-top: none; }
+.pac-item:hover, .pac-item-selected {
+  background: var(--higo-gray-100);
 }
+.pac-item-query {
+  color: var(--higo-gray-900);
+  font-weight: 600;
+}
+.pac-matched { color: var(--higo-blue-light); }
+.pac-icon { filter: invert(85%); }
