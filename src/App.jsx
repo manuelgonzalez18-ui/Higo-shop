@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell.jsx';
 import { GoogleMapsProvider } from './components/maps/MapView.jsx';
@@ -9,36 +9,43 @@ import { useAuthStore } from './stores/useAuthStore.js';
 // Route-level code splitting: each feature page becomes its own chunk so the
 // initial bundle only loads what's needed for the landing screen. Maps SDK
 // itself is lazy-loaded by APIProvider on its own.
-const MarketplaceHome = lazy(() =>
-  import('./features/marketplace/pages/MarketplaceHome.jsx').then((m) => ({ default: m.MarketplaceHome }))
-);
-const SearchMap = lazy(() =>
-  import('./features/marketplace/pages/SearchMap.jsx').then((m) => ({ default: m.SearchMap }))
-);
-const StoreView = lazy(() =>
-  import('./features/marketplace/pages/StoreView.jsx').then((m) => ({ default: m.StoreView }))
-);
-const CartPage = lazy(() =>
-  import('./features/cart/pages/CartPage.jsx').then((m) => ({ default: m.CartPage }))
-);
-const CheckoutPage = lazy(() =>
-  import('./features/checkout/pages/CheckoutPage.jsx').then((m) => ({ default: m.CheckoutPage }))
-);
-const OrdersPage = lazy(() =>
-  import('./features/orders/pages/OrdersPage.jsx').then((m) => ({ default: m.OrdersPage }))
-);
-const OrderDetailPage = lazy(() =>
-  import('./features/orders/pages/OrderDetailPage.jsx').then((m) => ({ default: m.OrderDetailPage }))
-);
-const ProfilePage = lazy(() =>
-  import('./features/profile/pages/ProfilePage.jsx').then((m) => ({ default: m.ProfilePage }))
-);
-const MerchantDashboard = lazy(() =>
-  import('./features/merchant/pages/MerchantDashboard.jsx').then((m) => ({ default: m.MerchantDashboard }))
-);
-const DriverDashboard = lazy(() =>
-  import('./features/driver/pages/DriverDashboard.jsx').then((m) => ({ default: m.DriverDashboard }))
-);
+const loadMarketplaceHome = () => import('./features/marketplace/pages/MarketplaceHome.jsx').then((m) => ({ default: m.MarketplaceHome }));
+const loadSearchMap = () => import('./features/marketplace/pages/SearchMap.jsx').then((m) => ({ default: m.SearchMap }));
+const loadStoreView = () => import('./features/marketplace/pages/StoreView.jsx').then((m) => ({ default: m.StoreView }));
+const loadCartPage = () => import('./features/cart/pages/CartPage.jsx').then((m) => ({ default: m.CartPage }));
+const loadCheckoutPage = () => import('./features/checkout/pages/CheckoutPage.jsx').then((m) => ({ default: m.CheckoutPage }));
+const loadOrdersPage = () => import('./features/orders/pages/OrdersPage.jsx').then((m) => ({ default: m.OrdersPage }));
+const loadOrderDetailPage = () => import('./features/orders/pages/OrderDetailPage.jsx').then((m) => ({ default: m.OrderDetailPage }));
+const loadProfilePage = () => import('./features/profile/pages/ProfilePage.jsx').then((m) => ({ default: m.ProfilePage }));
+const loadMerchantDashboard = () => import('./features/merchant/pages/MerchantDashboard.jsx').then((m) => ({ default: m.MerchantDashboard }));
+const loadDriverDashboard = () => import('./features/driver/pages/DriverDashboard.jsx').then((m) => ({ default: m.DriverDashboard }));
+
+const MarketplaceHome = lazy(loadMarketplaceHome);
+const SearchMap = lazy(loadSearchMap);
+const StoreView = lazy(loadStoreView);
+const CartPage = lazy(loadCartPage);
+const CheckoutPage = lazy(loadCheckoutPage);
+const OrdersPage = lazy(loadOrdersPage);
+const OrderDetailPage = lazy(loadOrderDetailPage);
+const ProfilePage = lazy(loadProfilePage);
+const MerchantDashboard = lazy(loadMerchantDashboard);
+const DriverDashboard = lazy(loadDriverDashboard);
+
+// Routes reachable from the bottom nav from any screen — preloading their
+// chunks during idle time after first paint makes the next tap feel instant.
+function prefetchBottomNavRoutes() {
+  const run = () => {
+    loadSearchMap();
+    loadCartPage();
+    loadProfilePage();
+  };
+  if (typeof window === 'undefined') return;
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(run, { timeout: 2000 });
+  } else {
+    setTimeout(run, 1500);
+  }
+}
 
 function HomeSelector() {
   const role = useAuthStore((s) => s.role);
@@ -61,6 +68,10 @@ function RouteFallback() {
 }
 
 export default function App() {
+  useEffect(() => {
+    prefetchBottomNavRoutes();
+  }, []);
+
   return (
     <GoogleMapsProvider>
       <RouteErrorBoundary>
