@@ -5,6 +5,7 @@ import { StoreView } from './features/marketplace/pages/StoreView.jsx';
 import { CartPage } from './features/cart/pages/CartPage.jsx';
 import { CheckoutPage } from './features/checkout/pages/CheckoutPage.jsx';
 import { OrdersPage } from './features/orders/pages/OrdersPage.jsx';
+import { OrderDetailPage } from './features/orders/pages/OrderDetailPage.jsx';
 import { ProfilePage } from './features/profile/pages/ProfilePage.jsx';
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout/:storeId" element={<CheckoutPage />} />
         <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/orders/:orderId" element={<OrderDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
     </Routes>

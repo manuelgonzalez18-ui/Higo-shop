@@ -46,6 +46,10 @@ export function OrdersPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
+                onClick={() => navigate(`/orders/${order.id}`)}
+                style={{ cursor: 'pointer' }}
+                whileHover={{ scale: 1.01, translateY: -2, boxShadow: 'var(--shadow-md)' }}
+                whileTap={{ scale: 0.99 }}
               >
                 <div className="order-card__top">
                   <div>
