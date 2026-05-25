@@ -90,6 +90,7 @@ export function OrderDetailPage() {
   const navigate = useNavigate();
 
   const { getOrderById, updateOrderStatus, upsertRemoteOrder } = useOrderStore();
+  const customerId = useAuthStore((s) => s.userId);
   const { chats, initializeChat, addMessage } = useChatStore();
 
   const localOrder = getOrderById(orderId);
@@ -259,6 +260,7 @@ export function OrderDetailPage() {
       orderId,
       eventType: 'PRODUCT_PAYMENT_REPORTED',
       actorType: 'customer',
+      actorId: customerId || 'customer-demo',
       payload: { source: 'order_detail' },
     }).catch((error) => reportRealtimeError('remote action failed', error));
   };
@@ -271,6 +273,7 @@ export function OrderDetailPage() {
       orderId,
       eventType: 'DELIVERY_PAYMENT_REPORTED',
       actorType: 'customer',
+      actorId: customerId || 'customer-demo',
       payload: { source: 'order_detail' },
     }).catch((error) => reportRealtimeError('remote action failed', error));
   };
