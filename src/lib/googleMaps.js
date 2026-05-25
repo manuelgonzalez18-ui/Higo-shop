@@ -1,12 +1,12 @@
 // Central config for Google Maps SDK loading.
 // API key falls back to the same public key used in the deploy workflow so
-// local dev works without a .env. Restricted by HTTP referrer on the Google
-// Cloud side.
-export const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+// local/manual builds work without a .env. Restricted by HTTP referrer on the
+// Google Cloud side. Sin este fallback, un build sin la env var hacía throw a
+// nivel de módulo y dejaba la app en pantalla negra (incidente 2026-05-24).
+const FALLBACK_API_KEY = 'AIzaSyAoGygSCo5Uxoi7Dz3-cusemmz2CD8Lhko';
 
-if (!GOOGLE_MAPS_API_KEY) {
-  throw new Error('Missing VITE_GOOGLE_MAPS_API_KEY environment variable.');
-}
+export const GOOGLE_MAPS_API_KEY =
+  import.meta.env.VITE_GOOGLE_MAPS_API_KEY || FALLBACK_API_KEY;
 
 // Optional mapId for vector + cloud-styled maps. When provided, AdvancedMarker
 // renders properly. Without it the markers still render but the SDK logs a
