@@ -150,6 +150,8 @@ export function CheckoutPage() {
       userLocation,
       storeLocation: { lat: store.latitude, lng: store.longitude },
       storePagoMovil: store.pagoMovil,
+      productPaymentStatus: 'PENDING_PRODUCT_PAYMENT',
+      deliveryPaymentStatus: 'DELIVERY_PAYMENT_PENDING',
     };
 
     try {
@@ -169,7 +171,7 @@ export function CheckoutPage() {
       createOrder({
         ...baseOrderData,
         id: remote.id,
-        status: remote.status,
+        status: remote.status || 'PENDING_PRODUCT_PAYMENT',
         createdAt: remote.createdAt,
         updatedAt: remote.updatedAt,
         driverId: remote.driverId,
@@ -228,7 +230,7 @@ export function CheckoutPage() {
           <button className="checkout-header__back" onClick={() => navigate(-1)}>
             <ArrowLeft size={20} />
           </button>
-          <h1>Confirmar Pedido</h1>
+          <h1>Pago dividido del pedido</h1>
         </div>
 
         {/* Delivery Address */}
