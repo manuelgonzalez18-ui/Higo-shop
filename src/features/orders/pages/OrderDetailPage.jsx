@@ -140,7 +140,7 @@ export function OrderDetailPage() {
   const currentLeg = useMemo(() => {
     if (!order) return 'none';
     if (order.status === 'DRIVER_ASSIGNED') return 'to_store';
-    if (order.status === 'PICKED_UP') return 'to_client';
+    if (['PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED'].includes(order.status)) return 'to_client';
     if (order.status === 'DELIVERED') return 'delivered';
     return 'none';
   }, [order?.status]);
