@@ -7,9 +7,21 @@ import { useAuthStore } from '../../../stores/useAuthStore.js';
 import { fetchOrdersByCustomerRemote, mapOrderRow } from '../../../services/orderService.js';
 import { useRealtimeOrders } from '../../../hooks/useRealtimeOrders.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
+import { formatOrderStatus } from '../../../services/orderStatus.js';
 import './OrdersPage.css';
 
 const STATUS_MAP = {
+
+  PENDING_PRODUCT_PAYMENT: { label: 'Pago de productos pendiente', color: 'var(--higo-warning)', icon: '💳', bg: 'var(--higo-warning-light)' },
+  PRODUCT_PAYMENT_REPORTED: { label: 'Pago reportado', color: 'var(--higo-info)', icon: '🧾', bg: 'var(--higo-info-light)' },
+  PRODUCT_PAYMENT_VERIFIED: { label: 'Pago verificado', color: 'var(--higo-info)', icon: '✅', bg: 'var(--higo-info-light)' },
+  READY_FOR_DRIVER_MATCH: { label: 'Buscando driver', color: 'var(--higo-blue)', icon: '📡', bg: 'var(--higo-blue-50)' },
+  DRIVER_CANDIDATE_BROADCASTED: { label: 'Oferta a drivers', color: 'var(--higo-blue)', icon: '📣', bg: 'var(--higo-blue-50)' },
+  DRIVER_EN_ROUTE_TO_STORE: { label: 'Driver al comercio', color: 'var(--higo-info)', icon: '🛵', bg: 'var(--higo-info-light)' },
+  DRIVER_EN_ROUTE_TO_CUSTOMER: { label: 'En camino al cliente', color: 'var(--higo-blue)', icon: '🚀', bg: 'var(--higo-blue-50)' },
+  DELIVERY_PAYMENT_PENDING: { label: 'Pago de envío pendiente', color: 'var(--higo-warning)', icon: '💵', bg: 'var(--higo-warning-light)' },
+  DELIVERY_PAYMENT_REPORTED: { label: 'Pago de envío reportado', color: 'var(--higo-info)', icon: '🧾', bg: 'var(--higo-info-light)' },
+  DELIVERY_PAYMENT_CONFIRMED: { label: 'Pago de envío confirmado', color: 'var(--higo-success)', icon: '✅', bg: 'var(--higo-success-light)' },
   PENDING_PAYMENT: { label: 'Pendiente por Pago', color: 'var(--higo-warning)', icon: '⏳', bg: 'var(--higo-warning-light)' },
   PAYMENT_VERIFIED: { label: 'Pago Verificado', color: 'var(--higo-info)', icon: '✅', bg: 'var(--higo-info-light)' },
   PREPARING: { label: 'En Preparación', color: 'var(--higo-blue)', icon: '👨‍🍳', bg: 'var(--higo-blue-50)' },
@@ -43,7 +55,7 @@ export function OrdersPage() {
           rows.forEach((r) => upsertRemoteOrder(r));
         }
       })
-      .catch(() => {});
+      .catch((error) => { console.warn('[OrdersPage] fetchOrdersByCustomerRemote', error?.message || error); });
     return () => { mounted = false; };
   }, [customerId, upsertRemoteOrder]);
 
@@ -75,7 +87,7 @@ export function OrdersPage() {
       ) : (
         <div className="orders-list">
           {mergedOrders.map((order, index) => {
-            const statusInfo = STATUS_MAP[order.status] || STATUS_MAP.PENDING_PAYMENT;
+            const statusInfo = STATUS_MAP[order.status] || { label: formatOrderStatus(order.status), color: 'var(--higo-gray-700)', icon: '•', bg: 'var(--higo-gray-100)' };
             return (
               <motion.div
                 key={order.id}
