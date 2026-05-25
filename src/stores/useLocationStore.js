@@ -1,17 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-const DEFAULT_LOCATION = { lat: 10.4961, lng: -66.8983 };
+const HIGUEROTE_DEFAULT_LOCATION = { lat: 10.4817, lng: -66.0997 };
 
-// Generates a stable-ish id without pulling in uuid. Sufficient for client-only
-// saved locations.
 const newId = () => `loc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export const useLocationStore = create(
   persist(
     (set) => ({
-      userLocation: DEFAULT_LOCATION,
-      deliveryAddress: 'Caracas, Venezuela',
+      userLocation: HIGUEROTE_DEFAULT_LOCATION,
+      deliveryAddress: 'Higuerote, Miranda, Venezuela',
       isLocating: false,
       error: null,
       savedLocations: [],
@@ -47,7 +45,7 @@ export const useLocationStore = create(
         set({ isLocating: true, error: null });
 
         if (!navigator.geolocation) {
-          set({ isLocating: false, error: 'Geolocalización no soportada', userLocation: DEFAULT_LOCATION });
+          set({ isLocating: false, error: 'Geolocalización no soportada', userLocation: HIGUEROTE_DEFAULT_LOCATION });
           return;
         }
 
@@ -65,7 +63,7 @@ export const useLocationStore = create(
             set({
               isLocating: false,
               error: 'No se pudo obtener la ubicación',
-              userLocation: DEFAULT_LOCATION,
+              userLocation: HIGUEROTE_DEFAULT_LOCATION,
             });
           },
           { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
