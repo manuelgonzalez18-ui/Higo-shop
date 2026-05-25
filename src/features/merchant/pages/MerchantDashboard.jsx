@@ -60,7 +60,7 @@ export function MerchantDashboard() {
     } else {
       setSelectedOrderId(null);
     }
-  }, [activeOrdersForTab]);
+  }, [activeTab]);
 
   const orderChat = useMemo(() => {
     if (!selectedOrder) return { storeMessages: [] };
@@ -97,9 +97,9 @@ export function MerchantDashboard() {
       syncOrderStatus(orderId, 'DRIVER_CANDIDATE_BROADCASTED').catch((error) => reportRealtimeError("realtime action failed", error));
       pushOrderEvent({ orderId, eventType: 'DRIVER_CANDIDATE_BROADCASTED', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
 
-      assignDriver(orderId, 'driver_001');
-      syncOrderStatus(orderId, 'DRIVER_ASSIGNED', 'driver_001').catch((error) => reportRealtimeError("realtime action failed", error));
-      pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'system', actorId: 'driver_001', payload: { city: 'Higuerote', source: 'merchant_auto_assign' } }).catch((error) => reportRealtimeError("realtime action failed", error));
+      assignDriver(orderId, merchantId);
+      syncOrderStatus(orderId, 'DRIVER_ASSIGNED', merchantId).catch((error) => reportRealtimeError("realtime action failed", error));
+      pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'system', actorId: merchantId, payload: { city: 'Higuerote', source: 'merchant_auto_assign' } }).catch((error) => reportRealtimeError("realtime action failed", error));
       
       addMessage(orderId, 'driverMessages', {
         sender: 'driver',
