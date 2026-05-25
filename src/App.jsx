@@ -9,6 +9,7 @@ import { useAuthStore } from './stores/useAuthStore.js';
 // Route-level code splitting: each feature page becomes its own chunk so the
 // initial bundle only loads what's needed for the landing screen. Maps SDK
 // itself is lazy-loaded by APIProvider on its own.
+const loadHigoAppHome = () => import('./features/hub/pages/HigoAppHome.jsx').then((m) => ({ default: m.HigoAppHome }));
 const loadMarketplaceHome = () => import('./features/marketplace/pages/MarketplaceHome.jsx').then((m) => ({ default: m.MarketplaceHome }));
 const loadSearchMap = () => import('./features/marketplace/pages/SearchMap.jsx').then((m) => ({ default: m.SearchMap }));
 const loadStoreView = () => import('./features/marketplace/pages/StoreView.jsx').then((m) => ({ default: m.StoreView }));
@@ -20,6 +21,7 @@ const loadProfilePage = () => import('./features/profile/pages/ProfilePage.jsx')
 const loadMerchantDashboard = () => import('./features/merchant/pages/MerchantDashboard.jsx').then((m) => ({ default: m.MerchantDashboard }));
 const loadDriverDashboard = () => import('./features/driver/pages/DriverDashboard.jsx').then((m) => ({ default: m.DriverDashboard }));
 
+const HigoAppHome = lazy(loadHigoAppHome);
 const MarketplaceHome = lazy(loadMarketplaceHome);
 const SearchMap = lazy(loadSearchMap);
 const StoreView = lazy(loadStoreView);
@@ -51,7 +53,7 @@ function HomeSelector() {
   const role = useAuthStore((s) => s.role);
   if (role === 'merchant') return <MerchantDashboard />;
   if (role === 'driver') return <DriverDashboard />;
-  return <MarketplaceHome />;
+  return <HigoAppHome />;
 }
 
 function RouteFallback() {
@@ -79,6 +81,7 @@ export default function App() {
           <Routes>
             <Route element={<AppShell />}>
               <Route path="/" element={<HomeSelector />} />
+              <Route path="/shop" element={<MarketplaceHome />} />
               <Route path="/search" element={<SearchMap />} />
               <Route path="/store/:storeId" element={<StoreView />} />
               <Route path="/cart" element={<CartPage />} />
