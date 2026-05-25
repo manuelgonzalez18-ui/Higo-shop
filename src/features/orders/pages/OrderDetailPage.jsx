@@ -6,7 +6,7 @@ import {
   Send, ShieldAlert, Image, Check
 } from 'lucide-react';
 import { useOrderStore } from '../../../stores/useOrderStore.js';
-import { subscribeToOrder } from '../../../services/orderRealtimeService.js';
+import { subscribeToOrder, syncOrderStatus } from '../../../services/orderRealtimeService.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { fetchStoreById } from '../../../services/storeService.js';
 import { fetchOrderByIdRemote } from '../../../services/orderService.js';
@@ -16,6 +16,7 @@ import { useDirections } from '../../../hooks/useDirections.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
 import { useLiveDriverTracking } from '../../../hooks/useLiveDriverTracking.js';
 import { useOrderEvents } from '../../../hooks/useOrderEvents.js';
+import { pushOrderEvent } from '../../../services/trackingService.js';
 import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
@@ -242,6 +243,31 @@ export function OrderDetailPage() {
   const getStepIndex = (status) => STATUS_STEPS.findIndex(s => s.id === normalizeStatusForSteps(status));
   const currentStepIndex = getStepIndex(order.status);
 
+
+  const reportProductPayment = () => {
+    if (!orderId) return;
+    updateOrderStatus(orderId, 'PRODUCT_PAYMENT_REPORTED');
+    syncOrderStatus(orderId, 'PRODUCT_PAYMENT_REPORTED').catch(() => {});
+    pushOrderEvent({
+      orderId,
+      eventType: 'PRODUCT_PAYMENT_REPORTED',
+      actorType: 'customer',
+      payload: { source: 'order_detail' },
+    }).catch(() => {});
+  };
+
+  const reportDeliveryPayment = () => {
+    if (!orderId) return;
+    updateOrderStatus(orderId, 'DELIVERY_PAYMENT_REPORTED');
+    syncOrderStatus(orderId, 'DELIVERY_PAYMENT_REPORTED').catch(() => {});
+    pushOrderEvent({
+      orderId,
+      eventType: 'DELIVERY_PAYMENT_REPORTED',
+      actorType: 'customer',
+      payload: { source: 'order_detail' },
+    }).catch(() => {});
+  };
+
   return (
       <div className="order-detail-page">
         <div className="order-detail-header">
@@ -321,6 +347,20 @@ export function OrderDetailPage() {
                 <span key={evt.id} className="status-pill" style={{ fontSize: '0.72rem' }}>{formatOrderEventType(evt.event_type)}</span>
               ))}
             </div>
+          </div>
+
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+            {(order.status === 'PENDING_PRODUCT_PAYMENT' || order.status === 'PENDING_PAYMENT') && (
+              <button className="higo-btn higo-btn-outline" onClick={reportProductPayment}>
+                Ya pagué al comercio
+              </button>
+            )}
+            {(order.status === 'PICKED_UP' || order.status === 'DRIVER_EN_ROUTE_TO_CUSTOMER' || order.status === 'DELIVERY_PAYMENT_PENDING') && (
+              <button className="higo-btn higo-btn-outline" onClick={reportDeliveryPayment}>
+                Ya pagué el envío al driver
+              </button>
+            )}
           </div>
 
           <div className="order-summary-header">
