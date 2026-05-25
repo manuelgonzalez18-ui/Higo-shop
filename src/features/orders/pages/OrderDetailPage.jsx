@@ -90,7 +90,7 @@ export function OrderDetailPage() {
   const navigate = useNavigate();
 
   const { getOrderById, updateOrderStatus, upsertRemoteOrder } = useOrderStore();
-  const { userId: customerId } = useAuthStore((s) => ({ userId: s.userId }));
+  const customerId = useAuthStore((s) => s.userId);
   const { chats, initializeChat, addMessage } = useChatStore();
 
   const localOrder = getOrderById(orderId);
