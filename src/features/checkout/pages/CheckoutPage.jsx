@@ -12,6 +12,9 @@ import { fetchStoreById } from '../../../services/storeService.js';
 import { useCartStore } from '../../../stores/useCartStore.js';
 import { useLocationStore } from '../../../stores/useLocationStore.js';
 import { useOrderStore } from '../../../stores/useOrderStore.js';
+import { useAuthStore } from '../../../stores/useAuthStore.js';
+import { createOrderRemote } from '../../../services/orderService.js';
+import { pushOrderEvent } from '../../../services/trackingService.js';
 import { useDeliveryFee } from '../../../hooks/useDeliveryFee.js';
 import { useDirections } from '../../../hooks/useDirections.js';
 import { formatCurrency, calculateChange } from '../../../services/deliveryPricing.js';
@@ -48,6 +51,7 @@ export function CheckoutPage() {
   const { carts, clearCart } = useCartStore();
   const { userLocation, deliveryAddress, setUserLocation, setDeliveryAddress } = useLocationStore();
   const { createOrder } = useOrderStore();
+  const customerId = useAuthStore((s) => s.userId);
 
   const directionsOrigin = userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null;
   const directionsDest = store ? { lat: store.latitude, lng: store.longitude } : null;
@@ -128,11 +132,11 @@ export function CheckoutPage() {
     }
   };
 
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = async () => {
     if (!store) return;
     setIsSubmitting(true);
 
-    const order = createOrder({
+    const baseOrderData = {
       storeId: store.id,
       storeName: store.name,
       items: items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
@@ -146,7 +150,44 @@ export function CheckoutPage() {
       userLocation,
       storeLocation: { lat: store.latitude, lng: store.longitude },
       storePagoMovil: store.pagoMovil,
-    });
+      productPaymentStatus: 'PENDING_PRODUCT_PAYMENT',
+      deliveryPaymentStatus: 'DELIVERY_PAYMENT_PENDING',
+    };
+
+    try {
+      const remote = await createOrderRemote({
+        customer_id: customerId,
+        store_id: store.id,
+        total: grandTotal,
+        delivery_fee: fee,
+        items: items.map(i => ({ id: i.id, name: i.name, quantity: i.quantity, price: i.price })),
+        payment_method: deliveryPayMethod === 'cash' ? 'cash' : 'pago_movil',
+        payment_status: 'PENDING',
+        delivery_address: deliveryAddress,
+        delivery_latitude: userLocation.lat,
+        delivery_longitude: userLocation.lng,
+      });
+
+      createOrder({
+        ...baseOrderData,
+        id: remote.id,
+        status: remote.status || 'PENDING_PRODUCT_PAYMENT',
+        createdAt: remote.createdAt,
+        updatedAt: remote.updatedAt,
+        driverId: remote.driverId,
+      });
+
+      await pushOrderEvent({
+        orderId: remote.id,
+        eventType: 'ORDER_CREATED',
+        actorType: 'customer',
+        actorId: customerId,
+        payload: { city: 'Higuerote' },
+      });
+    } catch (_err) {
+      // Fallback local for demo/offline flow.
+      createOrder(baseOrderData);
+    }
 
     clearCart(storeId);
 
@@ -189,7 +230,7 @@ export function CheckoutPage() {
           <button className="checkout-header__back" onClick={() => navigate(-1)}>
             <ArrowLeft size={20} />
           </button>
-          <h1>Confirmar Pedido</h1>
+          <h1>Pago dividido del pedido</h1>
         </div>
 
         {/* Delivery Address */}
