@@ -290,3 +290,89 @@ insert into public.stores (
   '6:00 AM - 9:00 PM',
   '{"phone": "04123333333", "bank": "Provincial", "cedula": "V-99999999", "holder": "Panificadora Guadalupe"}'
 ) on conflict do nothing;
+
+-- ====================================================================
+-- 8. DRIVER LIVE TRACKING TABLES
+-- ====================================================================
+
+create table if not exists public.driver_locations (
+  id uuid default gen_random_uuid() primary key,
+  order_id uuid references public.orders(id) on delete cascade not null,
+  driver_id uuid references public.profiles(id) on delete cascade not null,
+  lat double precision not null,
+  lng double precision not null,
+  bearing numeric,
+  speed_kmh numeric,
+  accuracy_m numeric,
+  recorded_at timestamptz not null default now()
+);
+
+create index if not exists driver_locations_order_time_idx on public.driver_locations(order_id, recorded_at desc);
+create index if not exists driver_locations_driver_time_idx on public.driver_locations(driver_id, recorded_at desc);
+
+alter table public.driver_locations enable row level security;
+
+create policy "Allow customers, merchants and assigned driver to read tracking"
+  on public.driver_locations for select
+  using (
+    exists (
+      select 1 from public.orders o
+      join public.stores s on s.id = o.store_id
+      where o.id = order_id
+      and (
+        o.customer_id = auth.uid()
+        or o.driver_id = auth.uid()
+        or s.owner_id = auth.uid()
+      )
+    )
+  );
+
+create policy "Allow assigned driver to insert tracking"
+  on public.driver_locations for insert
+  with check (driver_id = auth.uid());
+
+create table if not exists public.order_events (
+  id uuid default gen_random_uuid() primary key,
+  order_id uuid references public.orders(id) on delete cascade not null,
+  event_type text not null,
+  actor_type text not null check (actor_type in ('customer', 'merchant', 'driver', 'system')),
+  actor_id uuid,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists order_events_order_time_idx on public.order_events(order_id, created_at desc);
+alter table public.order_events enable row level security;
+
+create policy "Allow participants to read order events"
+  on public.order_events for select
+  using (
+    exists (
+      select 1 from public.orders o
+      join public.stores s on s.id = o.store_id
+      where o.id = order_id
+      and (
+        o.customer_id = auth.uid()
+        or o.driver_id = auth.uid()
+        or s.owner_id = auth.uid()
+      )
+    )
+  );
+
+create policy "Allow participants to insert order events"
+  on public.order_events for insert
+  with check (
+    exists (
+      select 1 from public.orders o
+      join public.stores s on s.id = o.store_id
+      where o.id = order_id
+      and (
+        o.customer_id = auth.uid()
+        or o.driver_id = auth.uid()
+        or s.owner_id = auth.uid()
+      )
+    )
+  );
+
+alter publication supabase_realtime add table public.driver_locations;
+alter publication supabase_realtime add table public.order_events;
