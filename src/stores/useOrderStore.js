@@ -65,6 +65,18 @@ export const useOrderStore = create(
       setActiveOrder: (orderId) => {
         set({ activeOrderId: orderId });
       },
+
+      upsertRemoteOrder: (remoteOrder) => {
+        set((state) => {
+          const idx = state.orders.findIndex((o) => o.id === remoteOrder.id);
+          if (idx === -1) {
+            return { orders: [remoteOrder, ...state.orders] };
+          }
+          const merged = [...state.orders];
+          merged[idx] = { ...merged[idx], ...remoteOrder };
+          return { orders: merged };
+        });
+      },
     }),
     {
       name: 'higo-shop-orders',
