@@ -1,10 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Truck, Navigation, MapPin, Store, MessageCircle, Send, Check, Phone,
   TrendingUp, AlertTriangle, ShieldCheck, CreditCard, Banknote, Smartphone
 } from 'lucide-react';
 import { useOrderStore } from '../../../stores/useOrderStore.js';
+import { useAuthStore } from '../../../stores/useAuthStore.js';
+import { pushDriverLocation, pushOrderEvent } from '../../../services/trackingService.js';
+import { formatOrderStatus } from '../../../services/orderStatus.js';
+import { fetchDispatchableOrdersRemote } from '../../../services/orderService.js';
+import { useRealtimeOrders } from '../../../hooks/useRealtimeOrders.js';
+import { syncOrderStatus } from '../../../services/orderRealtimeService.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
 import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
@@ -13,6 +19,10 @@ import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
 import { useDirections } from '../../../hooks/useDirections.js';
 import { formatDurationMin } from '../../../services/geolocation.js';
 import './DriverDashboard.css';
+
+const reportRealtimeError = (action, error) => {
+  console.warn(`[DriverDashboard] ${action}`, error?.message || error);
+};
 
 function DriverDeliveryMap({ storeLatLng, userLatLng, status }) {
   const { path, duration } = useDirections(storeLatLng, userLatLng);
@@ -47,29 +57,53 @@ function DriverDeliveryMap({ storeLatLng, userLatLng, status }) {
 }
 
 export function DriverDashboard() {
-  const { orders, updateOrderStatus, assignDriver } = useOrderStore();
+  const { orders, updateOrderStatus, assignDriver, upsertRemoteOrder } = useOrderStore();
+  const driverId = useAuthStore((s) => s.userId);
   const { chats, addMessage, initializeChat } = useChatStore();
   
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [chatInputText, setChatInputText] = useState('');
 
+  const handleRealtimeOrder = useCallback((row) => {
+    if (!row) return;
+    if (!['READY_TO_DISPATCH', 'READY_FOR_DRIVER_MATCH', 'DRIVER_CANDIDATE_BROADCASTED', 'DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE', 'PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED', 'DELIVERED'].includes(row.status)) return;
+    upsertRemoteOrder({
+      id: row.id,
+      status: row.status,
+      updatedAt: row.updated_at,
+      driverId: row.driver_id,
+      storeId: row.store_id,
+      deliveryAddress: row.delivery_address,
+      grandTotal: Number(row.total || 0),
+      deliveryFee: Number(row.delivery_fee || 0),
+    });
+  }, [upsertRemoteOrder]);
+
+  useRealtimeOrders({ customerId: null, onOrderUpsert: null });
+
+  useEffect(() => {
+    fetchDispatchableOrdersRemote()
+      .then((rows) => rows.forEach((o) => upsertRemoteOrder(o)))
+      .catch((error) => reportRealtimeError("realtime action failed", error));
+  }, [upsertRemoteOrder]);
+
   // 1. Filter available dispatchable orders in the zone (READY_TO_DISPATCH)
   const dispatchableOrders = useMemo(() => {
-    return orders.filter(o => o.status === 'READY_TO_DISPATCH');
+    return orders.filter(o => ['READY_TO_DISPATCH', 'READY_FOR_DRIVER_MATCH', 'DRIVER_CANDIDATE_BROADCASTED'].includes(o.status));
   }, [orders]);
 
-  // 2. Filter orders assigned to this driver ('driver-carlos') that are active
+  // 2. Filter orders assigned to this authenticated driver that are active
   const myActiveOrders = useMemo(() => {
     return orders.filter(o => 
-      o.driverId === 'driver-carlos' && 
-      ['DRIVER_ASSIGNED', 'PICKED_UP'].includes(o.status)
+      o.driverId === driverId && 
+      ['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE', 'PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED'].includes(o.status)
     );
   }, [orders]);
 
   // 3. Filter orders assigned to this driver that are completed
   const myCompletedOrders = useMemo(() => {
     return orders.filter(o => 
-      o.driverId === 'driver-carlos' && 
+      o.driverId === driverId && 
       o.status === 'DELIVERED'
     );
   }, [orders]);
@@ -108,7 +142,9 @@ export function DriverDashboard() {
   };
 
   const handleAcceptDelivery = (orderId) => {
-    assignDriver(orderId, 'driver-carlos');
+    assignDriver(orderId, driverId);
+    syncOrderStatus(orderId, 'DRIVER_EN_ROUTE_TO_STORE', driverId).catch((error) => reportRealtimeError("realtime action failed", error));
+    pushOrderEvent({ orderId, eventType: 'DRIVER_EN_ROUTE_TO_STORE', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     
     // Add greeting message
     addMessage(orderId, 'driverMessages', {
@@ -129,7 +165,9 @@ export function DriverDashboard() {
   };
 
   const handlePickupPackage = (orderId) => {
+    pushOrderEvent({ orderId, eventType: 'ORDER_PICKED_UP', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     updateOrderStatus(orderId, 'PICKED_UP');
+    syncOrderStatus(orderId, 'PICKED_UP').catch((error) => reportRealtimeError("realtime action failed", error));
     
     addMessage(orderId, 'driverMessages', {
       sender: 'driver',
@@ -137,14 +175,48 @@ export function DriverDashboard() {
     });
   };
 
+
+
+  const handleConfirmDeliveryPayment = (orderId) => {
+    pushOrderEvent({ orderId, eventType: 'DELIVERY_PAYMENT_CONFIRMED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
+    updateOrderStatus(orderId, 'DELIVERY_PAYMENT_CONFIRMED');
+    syncOrderStatus(orderId, 'DELIVERY_PAYMENT_CONFIRMED').catch((error) => reportRealtimeError("realtime action failed", error));
+
+    addMessage(orderId, 'driverMessages', {
+      sender: 'driver',
+      text: '💵 Pago de envío confirmado. Procedo a cerrar la entrega. ¡Gracias!'
+    });
+  };
+
   const handleDeliverPackage = (orderId) => {
+    pushOrderEvent({ orderId, eventType: 'ORDER_DELIVERED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     updateOrderStatus(orderId, 'DELIVERED');
+    syncOrderStatus(orderId, 'DELIVERED').catch((error) => reportRealtimeError("realtime action failed", error));
     
     addMessage(orderId, 'driverMessages', {
       sender: 'driver',
       text: '👋 ¡He llegado a tu ubicación! Estoy afuera para entregarte el pedido. ¡Muchas gracias!'
     });
   };
+
+
+  useEffect(() => {
+    if (!selectedOrder || !['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE', 'PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER'].includes(selectedOrder.status)) return;
+    const timer = setInterval(() => {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition((position) => {
+        pushDriverLocation({
+          orderId: selectedOrder.id,
+          driverId,
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          speedKmh: position.coords.speed ? position.coords.speed * 3.6 : null,
+          accuracyM: position.coords.accuracy ?? null,
+        }).catch((error) => reportRealtimeError("realtime action failed", error));
+      });
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [selectedOrder?.id, selectedOrder?.status, driverId]);
 
   // Calculations for Driver Statistics
   const stats = useMemo(() => {
@@ -187,7 +259,7 @@ export function DriverDashboard() {
               <div className="delivery-card__title">
                 <span>Orden Ref: {selectedOrder.id.slice(0, 8)}...</span>
                 <span className={`status-pill status-pill--${selectedOrder.status.toLowerCase()}`}>
-                  {selectedOrder.status}
+                  {formatOrderStatus(selectedOrder.status)}
                 </span>
               </div>
 
@@ -195,7 +267,7 @@ export function DriverDashboard() {
                 <DriverDeliveryMap
                   storeLatLng={selectedOrder.storeLocation}
                   userLatLng={selectedOrder.userLocation}
-                  status={selectedOrder.status}
+                  status={formatOrderStatus(selectedOrder.status)}
                 />
               )}
 
@@ -206,7 +278,7 @@ export function DriverDashboard() {
                   <div className="node-details">
                     <span className="label">Comercio (Retiro)</span>
                     <strong className="name">{selectedOrder.storeName}</strong>
-                    <span className="address">Av. Francisco de Miranda, Caracas</span>
+                    <span className="address">Higuerote, Miranda</span>
                   </div>
                 </div>
                 <div className="route-line" />
@@ -254,7 +326,7 @@ export function DriverDashboard() {
 
               {/* ACTION BUTTONS */}
               <div className="driver-action-buttons">
-                {selectedOrder.status === 'READY_TO_DISPATCH' && (
+                {['READY_TO_DISPATCH', 'READY_FOR_DRIVER_MATCH', 'DRIVER_CANDIDATE_BROADCASTED'].includes(selectedOrder.status) && (
                   <button
                     className="driver-btn driver-btn--primary"
                     onClick={() => handleAcceptDelivery(selectedOrder.id)}
@@ -263,7 +335,7 @@ export function DriverDashboard() {
                   </button>
                 )}
 
-                {selectedOrder.status === 'DRIVER_ASSIGNED' && (
+                {['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE'].includes(selectedOrder.status) && (
                   <button
                     className="driver-btn driver-btn--success"
                     onClick={() => handlePickupPackage(selectedOrder.id)}
@@ -272,7 +344,22 @@ export function DriverDashboard() {
                   </button>
                 )}
 
-                {selectedOrder.status === 'PICKED_UP' && (
+                {(selectedOrder.status === 'DELIVERY_PAYMENT_REPORTED') && (
+                  <button
+                    className="driver-btn driver-btn--success"
+                    onClick={() => handleConfirmDeliveryPayment(selectedOrder.id)}
+                  >
+                    💵 Confirmar pago de envío recibido
+                  </button>
+                )}
+
+                {['PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING'].includes(selectedOrder.status) && (
+                  <div className="driver-status-delivered" style={{ borderStyle: 'dashed' }}>
+                    <span>⏳ Pendiente confirmar pago de envío para cerrar entrega</span>
+                  </div>
+                )}
+
+                {['DELIVERY_PAYMENT_CONFIRMED'].includes(selectedOrder.status) && (
                   <button
                     className="driver-btn driver-btn--complete"
                     onClick={() => handleDeliverPackage(selectedOrder.id)}
@@ -325,11 +412,11 @@ export function DriverDashboard() {
                 placeholder="Escribe al cliente..."
                 value={chatInputText}
                 onChange={(e) => setChatInputText(e.target.value)}
-                disabled={['READY_TO_DISPATCH', 'DELIVERED'].includes(selectedOrder.status)}
+                disabled={['READY_TO_DISPATCH', 'READY_FOR_DRIVER_MATCH', 'DRIVER_CANDIDATE_BROADCASTED', 'DELIVERED'].includes(selectedOrder.status)}
               />
               <button
                 type="submit"
-                disabled={!chatInputText.trim() || ['READY_TO_DISPATCH', 'DELIVERED'].includes(selectedOrder.status)}
+                disabled={!chatInputText.trim() || ['READY_TO_DISPATCH', 'READY_FOR_DRIVER_MATCH', 'DRIVER_CANDIDATE_BROADCASTED', 'DELIVERED'].includes(selectedOrder.status)}
               >
                 <Send size={15} />
               </button>

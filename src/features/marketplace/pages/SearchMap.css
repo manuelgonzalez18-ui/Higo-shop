@@ -383,3 +383,29 @@
   color: var(--higo-gray-500);
   font-size: var(--font-sm);
 }
+
+.sheet-order-status {
+  font-size: 0.68rem;
+  font-weight: var(--weight-bold);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+}
+
+.sheet-order-status--pickup {
+  background: #FEF3C7;
+  color: #92400E;
+  border-color: #FCD34D;
+}
+
+.sheet-order-status--delivery {
+  background: #DBEAFE;
+  color: #1E40AF;
+  border-color: #93C5FD;
+}
+
+.sheet-order-status--neutral {
+  background: var(--higo-gray-100);
+  color: var(--higo-gray-700);
+  border-color: var(--higo-gray-200);
+}

@@ -2,9 +2,11 @@
 // API key falls back to the same public key used in the deploy workflow so
 // local dev works without a .env. Restricted by HTTP referrer on the Google
 // Cloud side.
-export const GOOGLE_MAPS_API_KEY =
-  import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
-  'AIzaSyAoGygSCo5Uxoi7Dz3-cusemmz2CD8Lhko';
+export const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+if (!GOOGLE_MAPS_API_KEY) {
+  throw new Error('Missing VITE_GOOGLE_MAPS_API_KEY environment variable.');
+}
 
 // Optional mapId for vector + cloud-styled maps. When provided, AdvancedMarker
 // renders properly. Without it the markers still render but the SDK logs a
