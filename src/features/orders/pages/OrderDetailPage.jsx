@@ -23,12 +23,13 @@ import { formatOrderEventType, formatOrderStatus } from '../../../services/order
 import './OrderDetailPage.css';
 
 const STATUS_STEPS = [
-  { id: 'PENDING_PAYMENT', label: 'Pago', icon: '💳' },
-  { id: 'PAYMENT_VERIFIED', label: 'Verificado', icon: '✅' },
+  { id: 'PENDING_PRODUCT_PAYMENT', label: 'Pago producto', icon: '💳' },
+  { id: 'PRODUCT_PAYMENT_VERIFIED', label: 'Pago validado', icon: '✅' },
   { id: 'PREPARING', label: 'Cocina', icon: '👨‍🍳' },
-  { id: 'READY_TO_DISPATCH', label: 'Listo', icon: '📦' },
+  { id: 'READY_FOR_DRIVER_MATCH', label: 'Buscando driver', icon: '📡' },
   { id: 'DRIVER_ASSIGNED', label: 'Asignado', icon: '🛵' },
-  { id: 'PICKED_UP', label: 'En Camino', icon: '🚀' },
+  { id: 'PICKED_UP', label: 'En ruta', icon: '🚀' },
+  { id: 'DELIVERY_PAYMENT_CONFIRMED', label: 'Envío pagado', icon: '💵' },
   { id: 'DELIVERED', label: 'Entregado', icon: '🏁' }
 ];
 
@@ -227,7 +228,18 @@ export function OrderDetailPage() {
     addMessage(orderId, targetTab, { sender: 'customer', text });
   };
 
-  const getStepIndex = (status) => STATUS_STEPS.findIndex(s => s.id === status);
+  const normalizeStatusForSteps = (status) => ({
+    PENDING_PAYMENT: 'PENDING_PRODUCT_PAYMENT',
+    PAYMENT_VERIFIED: 'PRODUCT_PAYMENT_VERIFIED',
+    READY_TO_DISPATCH: 'READY_FOR_DRIVER_MATCH',
+    DRIVER_CANDIDATE_BROADCASTED: 'READY_FOR_DRIVER_MATCH',
+    DRIVER_EN_ROUTE_TO_STORE: 'DRIVER_ASSIGNED',
+    DRIVER_EN_ROUTE_TO_CUSTOMER: 'PICKED_UP',
+    DELIVERY_PAYMENT_PENDING: 'PICKED_UP',
+    DELIVERY_PAYMENT_REPORTED: 'PICKED_UP',
+  }[status] || status);
+
+  const getStepIndex = (status) => STATUS_STEPS.findIndex(s => s.id === normalizeStatusForSteps(status));
   const currentStepIndex = getStepIndex(order.status);
 
   return (
