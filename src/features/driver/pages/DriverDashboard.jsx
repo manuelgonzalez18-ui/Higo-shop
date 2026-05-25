@@ -175,6 +175,19 @@ export function DriverDashboard() {
     });
   };
 
+
+
+  const handleConfirmDeliveryPayment = (orderId) => {
+    pushOrderEvent({ orderId, eventType: 'DELIVERY_PAYMENT_CONFIRMED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
+    updateOrderStatus(orderId, 'DELIVERY_PAYMENT_CONFIRMED');
+    syncOrderStatus(orderId, 'DELIVERY_PAYMENT_CONFIRMED').catch((error) => reportRealtimeError("realtime action failed", error));
+
+    addMessage(orderId, 'driverMessages', {
+      sender: 'driver',
+      text: '💵 Pago de envío confirmado. Procedo a cerrar la entrega. ¡Gracias!'
+    });
+  };
+
   const handleDeliverPackage = (orderId) => {
     pushOrderEvent({ orderId, eventType: 'ORDER_DELIVERED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     updateOrderStatus(orderId, 'DELIVERED');
@@ -331,7 +344,22 @@ export function DriverDashboard() {
                   </button>
                 )}
 
-                {['PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED'].includes(selectedOrder.status) && (
+                {(selectedOrder.status === 'DELIVERY_PAYMENT_REPORTED') && (
+                  <button
+                    className="driver-btn driver-btn--success"
+                    onClick={() => handleConfirmDeliveryPayment(selectedOrder.id)}
+                  >
+                    💵 Confirmar pago de envío recibido
+                  </button>
+                )}
+
+                {['PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING'].includes(selectedOrder.status) && (
+                  <div className="driver-status-delivered" style={{ borderStyle: 'dashed' }}>
+                    <span>⏳ Pendiente confirmar pago de envío para cerrar entrega</span>
+                  </div>
+                )}
+
+                {['DELIVERY_PAYMENT_CONFIRMED'].includes(selectedOrder.status) && (
                   <button
                     className="driver-btn driver-btn--complete"
                     onClick={() => handleDeliverPackage(selectedOrder.id)}
