@@ -166,8 +166,9 @@ export function DriverDashboard() {
 
   const handlePickupPackage = (orderId) => {
     pushOrderEvent({ orderId, eventType: 'ORDER_PICKED_UP', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
-    updateOrderStatus(orderId, 'PICKED_UP');
-    syncOrderStatus(orderId, 'PICKED_UP').catch((error) => reportRealtimeError("realtime action failed", error));
+    updateOrderStatus(orderId, 'DRIVER_EN_ROUTE_TO_CUSTOMER');
+    syncOrderStatus(orderId, 'DRIVER_EN_ROUTE_TO_CUSTOMER').catch((error) => reportRealtimeError("realtime action failed", error));
+    pushOrderEvent({ orderId, eventType: 'DRIVER_EN_ROUTE_TO_CUSTOMER', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     
     addMessage(orderId, 'driverMessages', {
       sender: 'driver',
