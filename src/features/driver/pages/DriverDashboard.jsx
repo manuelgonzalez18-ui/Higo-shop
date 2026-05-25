@@ -32,7 +32,7 @@ function DriverDeliveryMap({ storeLatLng, userLatLng, status }) {
   }), [storeLatLng.lat, storeLatLng.lng, userLatLng.lat, userLatLng.lng]);
 
   // Highlight different leg colors depending on driver progress.
-  const isEnRoute = status === 'PICKED_UP';
+  const isEnRoute = ['PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED'].includes(status);
   const routeColor = isEnRoute ? '#10B981' : '#3B82F6';
 
   return (
@@ -268,7 +268,7 @@ export function DriverDashboard() {
                 <DriverDeliveryMap
                   storeLatLng={selectedOrder.storeLocation}
                   userLatLng={selectedOrder.userLocation}
-                  status={formatOrderStatus(selectedOrder.status)}
+                  status={selectedOrder.status}
                 />
               )}
 
