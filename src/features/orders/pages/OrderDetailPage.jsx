@@ -102,6 +102,9 @@ export function OrderDetailPage() {
 
   const chatEndRef = useRef(null);
 
+  const reportRealtimeError = (context, error) => {
+    console.warn(`[OrderDetailPage] ${context}`, error?.message || error);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -112,7 +115,7 @@ export function OrderDetailPage() {
         setRemoteOrder(row);
         upsertRemoteOrder(row);
       })
-      .catch(() => {})
+      .catch((error) => reportRealtimeError('remote action failed', error))
       .finally(() => {
         if (mounted) setIsLoadingOrder(false);
       });
@@ -247,25 +250,25 @@ export function OrderDetailPage() {
   const reportProductPayment = () => {
     if (!orderId) return;
     updateOrderStatus(orderId, 'PRODUCT_PAYMENT_REPORTED');
-    syncOrderStatus(orderId, 'PRODUCT_PAYMENT_REPORTED').catch(() => {});
+    syncOrderStatus(orderId, 'PRODUCT_PAYMENT_REPORTED').catch((error) => reportRealtimeError('remote action failed', error));
     pushOrderEvent({
       orderId,
       eventType: 'PRODUCT_PAYMENT_REPORTED',
       actorType: 'customer',
       payload: { source: 'order_detail' },
-    }).catch(() => {});
+    }).catch((error) => reportRealtimeError('remote action failed', error));
   };
 
   const reportDeliveryPayment = () => {
     if (!orderId) return;
     updateOrderStatus(orderId, 'DELIVERY_PAYMENT_REPORTED');
-    syncOrderStatus(orderId, 'DELIVERY_PAYMENT_REPORTED').catch(() => {});
+    syncOrderStatus(orderId, 'DELIVERY_PAYMENT_REPORTED').catch((error) => reportRealtimeError('remote action failed', error));
     pushOrderEvent({
       orderId,
       eventType: 'DELIVERY_PAYMENT_REPORTED',
       actorType: 'customer',
       payload: { source: 'order_detail' },
-    }).catch(() => {});
+    }).catch((error) => reportRealtimeError('remote action failed', error));
   };
 
   return (
