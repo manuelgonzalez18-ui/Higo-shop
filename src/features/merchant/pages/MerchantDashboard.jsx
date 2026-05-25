@@ -209,7 +209,7 @@ export function MerchantDashboard() {
                 </div>
 
                 <div className="details-action-block__buttons">
-                  {selectedOrder.status === 'PENDING_PAYMENT' || selectedOrder.status === 'PENDING_PRODUCT_PAYMENT' || selectedOrder.status === 'PRODUCT_PAYMENT_REPORTED' && (
+                  {(selectedOrder.status === 'PENDING_PAYMENT' || selectedOrder.status === 'PENDING_PRODUCT_PAYMENT' || selectedOrder.status === 'PRODUCT_PAYMENT_REPORTED') && (
                     <button
                       className="action-btn action-btn--success"
                       onClick={() => { updateOrderStatus(selectedOrder.id, 'PRODUCT_PAYMENT_VERIFIED'); syncOrderStatus(selectedOrder.id, 'PRODUCT_PAYMENT_VERIFIED').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PRODUCT_PAYMENT_VERIFIED', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
