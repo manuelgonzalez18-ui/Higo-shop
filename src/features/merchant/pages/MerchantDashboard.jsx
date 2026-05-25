@@ -251,7 +251,7 @@ export function MerchantDashboard() {
                     </div>
                   )}
 
-                  {selectedOrder.status === 'PICKED_UP' && (
+                  {(selectedOrder.status === 'PICKED_UP' || selectedOrder.status === 'DRIVER_EN_ROUTE_TO_CUSTOMER' || selectedOrder.status === 'DELIVERY_PAYMENT_PENDING' || selectedOrder.status === 'DELIVERY_PAYMENT_REPORTED' || selectedOrder.status === 'DELIVERY_PAYMENT_CONFIRMED') && (
                     <div className="merchant-assigned-driver">
                       <span className="icon">🚀</span>
                       <span>En tránsito — Driver lleva el pedido al cliente</span>
