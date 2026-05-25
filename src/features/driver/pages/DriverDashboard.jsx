@@ -202,7 +202,7 @@ export function DriverDashboard() {
 
 
   useEffect(() => {
-    if (!selectedOrder || !['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE', 'PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER'].includes(selectedOrder.status)) return;
+    if (!selectedOrder || !['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE', 'PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED'].includes(selectedOrder.status)) return;
     const timer = setInterval(() => {
       if (!navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition((position) => {
