@@ -1,4 +1,11 @@
 import { supabase } from './supabase.js';
+import { ORDER_STATUSES } from './orderStatus.js';
+
+function assertNonEmptyId(value, fieldName) {
+  if (!value || typeof value !== 'string') {
+    throw new Error(`orderService: ${fieldName} inválido`);
+  }
+}
 
 export function mapOrderRow(row) {
   if (!row) return null;
@@ -7,9 +14,11 @@ export function mapOrderRow(row) {
   const deliveryFee = Number(row.delivery_fee || 0);
   const productTotal = Math.max(0, grandTotal - deliveryFee);
 
+  const status = ORDER_STATUSES.includes(row.status) ? row.status : 'PENDING_PAYMENT';
+
   return {
     id: row.id,
-    status: row.status,
+    status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     driverId: row.driver_id,
@@ -38,6 +47,8 @@ export async function createOrderRemote(orderPayload) {
 
 
 export async function fetchOrdersByCustomerRemote(customerId) {
+  assertNonEmptyId(customerId, 'customerId');
+
   const { data, error } = await supabase
     .from('orders')
     .select('*')
@@ -50,6 +61,8 @@ export async function fetchOrdersByCustomerRemote(customerId) {
 
 
 export async function fetchOrderByIdRemote(orderId) {
+  assertNonEmptyId(orderId, 'orderId');
+
   const { data, error } = await supabase
     .from('orders')
     .select('*')
@@ -73,6 +86,8 @@ export async function fetchDispatchableOrdersRemote() {
 }
 
 export async function fetchStoreOrdersRemote(storeId) {
+  assertNonEmptyId(storeId, 'storeId');
+
   const { data, error } = await supabase
     .from('orders')
     .select('*')

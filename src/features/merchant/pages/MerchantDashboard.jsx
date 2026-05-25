@@ -9,10 +9,15 @@ import { useAuthStore } from '../../../stores/useAuthStore.js';
 import { syncOrderStatus } from '../../../services/orderRealtimeService.js';
 import { fetchStoreOrdersRemote } from '../../../services/orderService.js';
 import { pushOrderEvent } from '../../../services/trackingService.js';
+import { formatOrderStatus } from '../../../services/orderStatus.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
 import './MerchantDashboard.css';
+
+const reportRealtimeError = (action, error) => {
+  console.warn(`[MerchantDashboard] ${action}`, error?.message || error);
+};
 
 const STATUS_SECTIONS = [
   { id: 'pending', label: 'Por Validar', icon: '💳', statuses: ['PENDING_PAYMENT'] },
@@ -35,7 +40,7 @@ export function MerchantDashboard() {
     if (!fallbackStoreId) return;
     fetchStoreOrdersRemote(fallbackStoreId)
       .then((rows) => rows.forEach((o) => upsertRemoteOrder(o)))
-      .catch(() => {});
+      .catch((error) => reportRealtimeError("realtime action failed", error));
   }, [orders, upsertRemoteOrder]);
 
   // Auto-select first order if exists
@@ -78,8 +83,8 @@ export function MerchantDashboard() {
   // Simulates Driver assignment upon dispatch
   const handleDispatchOrder = (orderId) => {
     updateOrderStatus(orderId, 'READY_TO_DISPATCH');
-    syncOrderStatus(orderId, 'READY_TO_DISPATCH').catch(() => {});
-    pushOrderEvent({ orderId, eventType: 'READY_TO_DISPATCH', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch(() => {});
+    syncOrderStatus(orderId, 'READY_TO_DISPATCH').catch((error) => reportRealtimeError("realtime action failed", error));
+    pushOrderEvent({ orderId, eventType: 'READY_TO_DISPATCH', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     
     addMessage(orderId, 'storeMessages', {
       sender: 'store',
@@ -89,8 +94,8 @@ export function MerchantDashboard() {
     // Simulate driver matching in 4 seconds
     setTimeout(() => {
       assignDriver(orderId, driverId);
-      syncOrderStatus(orderId, 'DRIVER_ASSIGNED', driverId).catch(() => {});
-      pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'system', actorId: driverId, payload: { city: 'Higuerote', source: 'merchant_auto_assign' } }).catch(() => {});
+      syncOrderStatus(orderId, 'DRIVER_ASSIGNED', driverId).catch((error) => reportRealtimeError("realtime action failed", error));
+      pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'system', actorId: driverId, payload: { city: 'Higuerote', source: 'merchant_auto_assign' } }).catch((error) => reportRealtimeError("realtime action failed", error));
       
       addMessage(orderId, 'driverMessages', {
         sender: 'driver',
@@ -196,14 +201,14 @@ export function MerchantDashboard() {
               <div className="details-action-block">
                 <div className="details-action-block__status">
                   <span>Estado:</span>
-                  <strong>{selectedOrder.status}</strong>
+                  <strong>{formatOrderStatus(selectedOrder.status)}</strong>
                 </div>
 
                 <div className="details-action-block__buttons">
                   {selectedOrder.status === 'PENDING_PAYMENT' && (
                     <button
                       className="action-btn action-btn--success"
-                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PAYMENT_VERIFIED'); syncOrderStatus(selectedOrder.id, 'PAYMENT_VERIFIED').catch(() => {}); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PAYMENT_VERIFIED', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch(() => {}); }}
+                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PAYMENT_VERIFIED'); syncOrderStatus(selectedOrder.id, 'PAYMENT_VERIFIED').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PAYMENT_VERIFIED', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
                     >
                       <CheckCircle2 size={16} />
                       Confirmar Pago Recibido
@@ -213,7 +218,7 @@ export function MerchantDashboard() {
                   {selectedOrder.status === 'PAYMENT_VERIFIED' && (
                     <button
                       className="action-btn action-btn--primary"
-                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PREPARING'); syncOrderStatus(selectedOrder.id, 'PREPARING').catch(() => {}); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PREPARING', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch(() => {}); }}
+                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PREPARING'); syncOrderStatus(selectedOrder.id, 'PREPARING').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PREPARING', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
                     >
                       👨‍🍳 Iniciar Preparación
                     </button>

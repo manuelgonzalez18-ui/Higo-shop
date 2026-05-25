@@ -6,6 +6,7 @@ export function useLiveDriverTracking(orderId, fallbackPosition = null) {
   const [driverPos, setDriverPos] = useState(fallbackPosition);
   const [driverBearing, setDriverBearing] = useState(null);
   const [lastSignalAt, setLastSignalAt] = useState(null);
+  const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
     if (!orderId) return;
@@ -21,10 +22,16 @@ export function useLiveDriverTracking(orderId, fallbackPosition = null) {
     return unsubscribe;
   }, [orderId]);
 
+  useEffect(() => {
+    if (!lastSignalAt) return;
+    const timer = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [lastSignalAt]);
+
   const signalAgeSec = useMemo(() => {
     if (!lastSignalAt) return null;
-    return Math.max(0, Math.round((Date.now() - new Date(lastSignalAt).getTime()) / 1000));
-  }, [lastSignalAt]);
+    return Math.max(0, Math.round((nowMs - new Date(lastSignalAt).getTime()) / 1000));
+  }, [lastSignalAt, nowMs]);
 
   return { driverPos, driverBearing, signalAgeSec, lastSignalAt };
 }

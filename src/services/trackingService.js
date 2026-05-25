@@ -1,6 +1,26 @@
 import { supabase } from './supabase.js';
 
+const ACTOR_TYPES = new Set(['system', 'customer', 'merchant', 'driver']);
+
+function assertValidOrderId(orderId) {
+  if (!orderId || typeof orderId !== 'string') {
+    throw new Error('trackingService: orderId inválido');
+  }
+}
+
+function assertValidCoordinates(lat, lng) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    throw new Error('trackingService: lat/lng inválidos');
+  }
+}
+
 export async function pushDriverLocation({ orderId, driverId, lat, lng, bearing = null, speedKmh = null, accuracyM = null }) {
+  assertValidOrderId(orderId);
+  assertValidCoordinates(lat, lng);
+  if (!driverId || typeof driverId !== 'string') {
+    throw new Error('trackingService: driverId inválido');
+  }
+
   const { error } = await supabase.from('driver_locations').insert({
     order_id: orderId,
     driver_id: driverId,
@@ -14,6 +34,14 @@ export async function pushDriverLocation({ orderId, driverId, lat, lng, bearing 
 }
 
 export async function pushOrderEvent({ orderId, eventType, actorType = 'system', actorId = null, payload = {} }) {
+  assertValidOrderId(orderId);
+  if (!eventType || typeof eventType !== 'string') {
+    throw new Error('trackingService: eventType inválido');
+  }
+  if (!ACTOR_TYPES.has(actorType)) {
+    throw new Error(`trackingService: actorType inválido (${actorType})`);
+  }
+
   const { error } = await supabase.from('order_events').insert({
     order_id: orderId,
     event_type: eventType,
@@ -25,6 +53,11 @@ export async function pushOrderEvent({ orderId, eventType, actorType = 'system',
 }
 
 export function subscribeToDriverLocations(orderId, onLocation) {
+  assertValidOrderId(orderId);
+  if (typeof onLocation !== 'function') {
+    throw new Error('trackingService: onLocation debe ser una función');
+  }
+
   const channel = supabase
     .channel(`driver-locations-${orderId}`)
     .on(

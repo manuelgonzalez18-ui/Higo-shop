@@ -7,6 +7,7 @@ import {
 import { useOrderStore } from '../../../stores/useOrderStore.js';
 import { useAuthStore } from '../../../stores/useAuthStore.js';
 import { pushDriverLocation, pushOrderEvent } from '../../../services/trackingService.js';
+import { formatOrderStatus } from '../../../services/orderStatus.js';
 import { fetchDispatchableOrdersRemote } from '../../../services/orderService.js';
 import { useRealtimeOrders } from '../../../hooks/useRealtimeOrders.js';
 import { syncOrderStatus } from '../../../services/orderRealtimeService.js';
@@ -18,6 +19,10 @@ import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
 import { useDirections } from '../../../hooks/useDirections.js';
 import { formatDurationMin } from '../../../services/geolocation.js';
 import './DriverDashboard.css';
+
+const reportRealtimeError = (action, error) => {
+  console.warn(`[DriverDashboard] ${action}`, error?.message || error);
+};
 
 function DriverDeliveryMap({ storeLatLng, userLatLng, status }) {
   const { path, duration } = useDirections(storeLatLng, userLatLng);
@@ -79,7 +84,7 @@ export function DriverDashboard() {
   useEffect(() => {
     fetchDispatchableOrdersRemote()
       .then((rows) => rows.forEach((o) => upsertRemoteOrder(o)))
-      .catch(() => {});
+      .catch((error) => reportRealtimeError("realtime action failed", error));
   }, [upsertRemoteOrder]);
 
   // 1. Filter available dispatchable orders in the zone (READY_TO_DISPATCH)
@@ -138,8 +143,8 @@ export function DriverDashboard() {
 
   const handleAcceptDelivery = (orderId) => {
     assignDriver(orderId, driverId);
-    syncOrderStatus(orderId, 'DRIVER_ASSIGNED', driverId).catch(() => {});
-    pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch(() => {});
+    syncOrderStatus(orderId, 'DRIVER_ASSIGNED', driverId).catch((error) => reportRealtimeError("realtime action failed", error));
+    pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     
     // Add greeting message
     addMessage(orderId, 'driverMessages', {
@@ -160,9 +165,9 @@ export function DriverDashboard() {
   };
 
   const handlePickupPackage = (orderId) => {
-    pushOrderEvent({ orderId, eventType: 'ORDER_PICKED_UP', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch(() => {});
+    pushOrderEvent({ orderId, eventType: 'ORDER_PICKED_UP', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     updateOrderStatus(orderId, 'PICKED_UP');
-    syncOrderStatus(orderId, 'PICKED_UP').catch(() => {});
+    syncOrderStatus(orderId, 'PICKED_UP').catch((error) => reportRealtimeError("realtime action failed", error));
     
     addMessage(orderId, 'driverMessages', {
       sender: 'driver',
@@ -171,9 +176,9 @@ export function DriverDashboard() {
   };
 
   const handleDeliverPackage = (orderId) => {
-    pushOrderEvent({ orderId, eventType: 'ORDER_DELIVERED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch(() => {});
+    pushOrderEvent({ orderId, eventType: 'ORDER_DELIVERED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     updateOrderStatus(orderId, 'DELIVERED');
-    syncOrderStatus(orderId, 'DELIVERED').catch(() => {});
+    syncOrderStatus(orderId, 'DELIVERED').catch((error) => reportRealtimeError("realtime action failed", error));
     
     addMessage(orderId, 'driverMessages', {
       sender: 'driver',
@@ -194,7 +199,7 @@ export function DriverDashboard() {
           lng: position.coords.longitude,
           speedKmh: position.coords.speed ? position.coords.speed * 3.6 : null,
           accuracyM: position.coords.accuracy ?? null,
-        }).catch(() => {});
+        }).catch((error) => reportRealtimeError("realtime action failed", error));
       });
     }, 5000);
     return () => clearInterval(timer);
@@ -241,7 +246,7 @@ export function DriverDashboard() {
               <div className="delivery-card__title">
                 <span>Orden Ref: {selectedOrder.id.slice(0, 8)}...</span>
                 <span className={`status-pill status-pill--${selectedOrder.status.toLowerCase()}`}>
-                  {selectedOrder.status}
+                  {formatOrderStatus(selectedOrder.status)}
                 </span>
               </div>
 
@@ -249,7 +254,7 @@ export function DriverDashboard() {
                 <DriverDeliveryMap
                   storeLatLng={selectedOrder.storeLocation}
                   userLatLng={selectedOrder.userLocation}
-                  status={selectedOrder.status}
+                  status={formatOrderStatus(selectedOrder.status)}
                 />
               )}
 

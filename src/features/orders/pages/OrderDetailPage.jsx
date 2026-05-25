@@ -19,6 +19,7 @@ import { useOrderEvents } from '../../../hooks/useOrderEvents.js';
 import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
+import { formatOrderEventType, formatOrderStatus } from '../../../services/orderStatus.js';
 import './OrderDetailPage.css';
 
 const STATUS_STEPS = [
@@ -237,7 +238,7 @@ export function OrderDetailPage() {
           </button>
           <div>
             <h2>Seguimiento de Orden</h2>
-            <span className="order-id-label">Ref: {order.id.slice(0, 8)}...</span>
+            <span className="order-id-label">Ref: {order.id.slice(0, 8)}... · {formatOrderStatus(order.status)}</span>
           </div>
         </div>
 
@@ -305,7 +306,7 @@ export function OrderDetailPage() {
             <strong style={{ fontSize: '0.9rem' }}>Eventos en vivo</strong>
             <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
               {orderEvents.slice(0, 3).map((evt) => (
-                <span key={evt.id} className="status-pill" style={{ fontSize: '0.72rem' }}>{evt.event_type}</span>
+                <span key={evt.id} className="status-pill" style={{ fontSize: '0.72rem' }}>{formatOrderEventType(evt.event_type)}</span>
               ))}
             </div>
           </div>

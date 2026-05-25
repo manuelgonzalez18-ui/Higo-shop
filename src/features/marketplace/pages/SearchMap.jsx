@@ -14,9 +14,15 @@ import { MapView } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
 import { useDirections } from '../../../hooks/useDirections.js';
+import { formatOrderStatus } from '../../../services/orderStatus.js';
 import './SearchMap.css';
 
 const HIGUEROTE_CENTER = { lat: 10.4817, lng: -66.0997 };
+
+const ORDER_STATUS_COPY = {
+  DRIVER_ASSIGNED: { label: 'El driver va a la tienda', tone: 'pickup' },
+  PICKED_UP: { label: 'Tu pedido va en camino', tone: 'delivery' },
+};
 
 export function SearchMap() {
   const navigate = useNavigate();
@@ -36,7 +42,7 @@ export function SearchMap() {
   const trackingStoreLatLng = activeOrder?.storeLocation || null;
   const trackingUserLatLng = activeOrder?.userLocation || userLocation || null;
   const currentLeg = activeOrder?.status === 'DRIVER_ASSIGNED' ? 'to_store' : activeOrder?.status === 'PICKED_UP' ? 'to_client' : 'none';
-  const legOrigin = currentLeg === 'to_store' ? trackingStoreLatLng : trackingStoreLatLng;
+  const legOrigin = driverPos || trackingStoreLatLng;
   const legDest = currentLeg === 'to_store' ? trackingStoreLatLng : trackingUserLatLng;
   const { path: trackingPath, duration: trackingDurationSec } = useDirections(legOrigin, legDest);
   const { driverPos, driverBearing, signalAgeSec } = useLiveDriverTracking(activeOrder?.id, trackingStoreLatLng);
@@ -84,6 +90,8 @@ export function SearchMap() {
   const centerOnUser = () => {
     requestLocation();
   };
+
+  const activeOrderStatusUi = activeOrder ? ORDER_STATUS_COPY[activeOrder.status] || { label: formatOrderStatus(activeOrder.status), tone: 'neutral' } : null;
 
   const categoryLabels = {
     restaurant: 'Restaurante',
@@ -203,13 +211,13 @@ export function SearchMap() {
             <>
               <div className="sheet-header">
                 <h3><Truck size={18} style={{ marginRight: 6 }} />Seguimiento en vivo</h3>
-                <span className="sheet-stores-count">Pedido {activeOrder.id.slice(0, 8)}...</span>
+                <span className="sheet-stores-count">{formatOrderStatus(activeOrder.status)} · {activeOrder.id.slice(0, 8)}...</span>
               </div>
               <div className="sheet-store-card highlighted" style={{ cursor: 'default' }}>
                 <div className="sheet-store-details">
                   <div className="sheet-store-name">{activeOrder.storeName || 'Comercio'}</div>
                   <div className="sheet-store-rating-row">
-                    <span className="sheet-store-category">Estado: {activeOrder.status}</span>
+                    <span className={`sheet-order-status sheet-order-status--${activeOrderStatusUi?.tone || 'neutral'}`}>{activeOrderStatusUi?.label}</span>
                     {trackingDurationSec != null && (
                       <>
                         <span className="sheet-store-bullet">•</span>
@@ -220,6 +228,7 @@ export function SearchMap() {
                   <div className="sheet-store-subdetails">
                     <span className="sheet-store-distance">
                       <Clock size={12} /> {signalAgeSec == null ? 'Esperando señal del driver...' : signalAgeSec <= 10 ? 'Ubicación en vivo' : `Última señal hace ${signalAgeSec}s`}
+                      {activeOrder?.driverName ? ` · ${activeOrder.driverName}` : ''}
                     </span>
                   </div>
                 </div>
@@ -253,7 +262,7 @@ export function SearchMap() {
                         onClick={() => setSelectedStore(store)}
                       >
                         <div className={`sheet-store-avatar sheet-store-avatar--${store.category}`}>
-                          {store.category === 'restaurant' ? '🫓' : store.category === 'pharmacy' ? '💊' : store.category === 'bakery' ? '🥐' : store.category === 'grocery' ? '🛒' : '☕'}
+                          {store.category === 'restaurant' ? '🍽️' : store.category === 'pharmacy' ? '💊' : store.category === 'bakery' ? '🥐' : store.category === 'grocery' ? '🛒' : '☕'}
                         </div>
 
                         <div className="sheet-store-details">

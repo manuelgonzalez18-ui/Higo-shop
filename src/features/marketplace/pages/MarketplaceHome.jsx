@@ -26,7 +26,7 @@ const ACTIVE_ORDER_STATUSES = [
 
 const CATEGORIES = [
   { id: 'all', label: 'Todos', emoji: '🏪' },
-  { id: 'restaurant', label: 'Restaurante', emoji: '🫓' },
+  { id: 'restaurant', label: 'Restaurante', emoji: '🍽️' },
   { id: 'pharmacy', label: 'Farmacia', emoji: '💊' },
   { id: 'bakery', label: 'Panadería', emoji: '🥐' },
   { id: 'grocery', label: 'Bodega', emoji: '🛒' },
@@ -188,7 +188,7 @@ export function MarketplaceHome() {
         <h3 className="section-title">Promociones para ti</h3>
         <div className="promotions-scroll">
           {stores.slice(0, 4).map((store, idx) => {
-            const promoBadges = ["Promoción 2x1", "Envío Gratis", "15% de Descuento", "Ahorra 10 Bs."];
+            const promoBadges = ["Promoción 2x1", "Envío Gratis", "15% OFF", "Ahorra 10 Bs."];
             const promoBadge = promoBadges[idx % promoBadges.length];
             return (
               <Link to={`/store/${store.id}`} key={store.id} className="promo-card">
@@ -274,7 +274,7 @@ function StoreCard({ store, userLocation }) {
     : null;
 
   const categoryEmojis = {
-    restaurant: '🫓',
+    restaurant: '🍽️',
     pharmacy: '💊',
     bakery: '🥐',
     grocery: '🛒',
