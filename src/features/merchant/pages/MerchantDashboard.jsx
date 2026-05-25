@@ -23,7 +23,7 @@ const STATUS_SECTIONS = [
   { id: 'pending', label: 'Por Validar', icon: '💳', statuses: ['PENDING_PRODUCT_PAYMENT', 'PRODUCT_PAYMENT_REPORTED', 'PENDING_PAYMENT'] },
   { id: 'kitchen', label: 'En Cocina', icon: '👨‍🍳', statuses: ['PRODUCT_PAYMENT_VERIFIED', 'PAYMENT_VERIFIED', 'PREPARING'] },
   { id: 'dispatch', label: 'Despacho', icon: '📦', statuses: ['READY_FOR_DRIVER_MATCH', 'READY_TO_DISPATCH', 'DRIVER_CANDIDATE_BROADCASTED'] },
-  { id: 'delivered', label: 'Historial', icon: '🏁', statuses: ['DRIVER_ASSIGNED', 'PICKED_UP', 'DELIVERED', 'CANCELLED'] }
+  { id: 'delivered', label: 'Historial', icon: '🏁', statuses: ['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE', 'PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED', 'DELIVERED', 'CANCELLED'] }
 ];
 
 export function MerchantDashboard() {
