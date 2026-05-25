@@ -6,7 +6,7 @@ import {
   Send, ShieldAlert, Image, Check
 } from 'lucide-react';
 import { useOrderStore } from '../../../stores/useOrderStore.js';
-import { subscribeToOrder } from '../../../services/orderRealtimeService.js';
+import { subscribeToOrder, syncOrderStatus } from '../../../services/orderRealtimeService.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { fetchStoreById } from '../../../services/storeService.js';
 import { fetchOrderByIdRemote } from '../../../services/orderService.js';
@@ -16,6 +16,7 @@ import { useDirections } from '../../../hooks/useDirections.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
 import { useLiveDriverTracking } from '../../../hooks/useLiveDriverTracking.js';
 import { useOrderEvents } from '../../../hooks/useOrderEvents.js';
+import { pushOrderEvent } from '../../../services/trackingService.js';
 import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
@@ -23,12 +24,13 @@ import { formatOrderEventType, formatOrderStatus } from '../../../services/order
 import './OrderDetailPage.css';
 
 const STATUS_STEPS = [
-  { id: 'PENDING_PAYMENT', label: 'Pago', icon: '💳' },
-  { id: 'PAYMENT_VERIFIED', label: 'Verificado', icon: '✅' },
+  { id: 'PENDING_PRODUCT_PAYMENT', label: 'Pago producto', icon: '💳' },
+  { id: 'PRODUCT_PAYMENT_VERIFIED', label: 'Pago validado', icon: '✅' },
   { id: 'PREPARING', label: 'Cocina', icon: '👨‍🍳' },
-  { id: 'READY_TO_DISPATCH', label: 'Listo', icon: '📦' },
+  { id: 'READY_FOR_DRIVER_MATCH', label: 'Buscando driver', icon: '📡' },
   { id: 'DRIVER_ASSIGNED', label: 'Asignado', icon: '🛵' },
-  { id: 'PICKED_UP', label: 'En Camino', icon: '🚀' },
+  { id: 'PICKED_UP', label: 'En ruta', icon: '🚀' },
+  { id: 'DELIVERY_PAYMENT_CONFIRMED', label: 'Envío pagado', icon: '💵' },
   { id: 'DELIVERED', label: 'Entregado', icon: '🏁' }
 ];
 
@@ -88,6 +90,7 @@ export function OrderDetailPage() {
   const navigate = useNavigate();
 
   const { getOrderById, updateOrderStatus, upsertRemoteOrder } = useOrderStore();
+  const customerId = useAuthStore((s) => s.userId);
   const { chats, initializeChat, addMessage } = useChatStore();
 
   const localOrder = getOrderById(orderId);
@@ -100,6 +103,9 @@ export function OrderDetailPage() {
 
   const chatEndRef = useRef(null);
 
+  const reportRealtimeError = (context, error) => {
+    console.warn(`[OrderDetailPage] ${context}`, error?.message || error);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -110,7 +116,7 @@ export function OrderDetailPage() {
         setRemoteOrder(row);
         upsertRemoteOrder(row);
       })
-      .catch(() => {})
+      .catch((error) => reportRealtimeError('remote action failed', error))
       .finally(() => {
         if (mounted) setIsLoadingOrder(false);
       });
@@ -138,7 +144,7 @@ export function OrderDetailPage() {
   const currentLeg = useMemo(() => {
     if (!order) return 'none';
     if (order.status === 'DRIVER_ASSIGNED') return 'to_store';
-    if (order.status === 'PICKED_UP') return 'to_client';
+    if (['PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED'].includes(order.status)) return 'to_client';
     if (order.status === 'DELIVERED') return 'delivered';
     return 'none';
   }, [order?.status]);
@@ -167,10 +173,14 @@ export function OrderDetailPage() {
 
     initializeChat(orderId);
 
-    fetchStoreById(order.storeId).then(data => {
-      setStore(data);
-      setIsLoadingStore(false);
-    });
+    fetchStoreById(order.storeId)
+      .then(data => {
+        setStore(data);
+      })
+      .catch((error) => reportRealtimeError('store fetch failed', error))
+      .finally(() => {
+        setIsLoadingStore(false);
+      });
   }, [orderId, order?.storeId]);
 
   useEffect(() => {
@@ -227,8 +237,46 @@ export function OrderDetailPage() {
     addMessage(orderId, targetTab, { sender: 'customer', text });
   };
 
-  const getStepIndex = (status) => STATUS_STEPS.findIndex(s => s.id === status);
+  const normalizeStatusForSteps = (status) => ({
+    PENDING_PAYMENT: 'PENDING_PRODUCT_PAYMENT',
+    PAYMENT_VERIFIED: 'PRODUCT_PAYMENT_VERIFIED',
+    READY_TO_DISPATCH: 'READY_FOR_DRIVER_MATCH',
+    DRIVER_CANDIDATE_BROADCASTED: 'READY_FOR_DRIVER_MATCH',
+    DRIVER_EN_ROUTE_TO_STORE: 'DRIVER_ASSIGNED',
+    DRIVER_EN_ROUTE_TO_CUSTOMER: 'PICKED_UP',
+    DELIVERY_PAYMENT_PENDING: 'PICKED_UP',
+    DELIVERY_PAYMENT_REPORTED: 'PICKED_UP',
+  }[status] || status);
+
+  const getStepIndex = (status) => STATUS_STEPS.findIndex(s => s.id === normalizeStatusForSteps(status));
   const currentStepIndex = getStepIndex(order.status);
+
+
+  const reportProductPayment = () => {
+    if (!orderId) return;
+    updateOrderStatus(orderId, 'PRODUCT_PAYMENT_REPORTED');
+    syncOrderStatus(orderId, 'PRODUCT_PAYMENT_REPORTED').catch((error) => reportRealtimeError('remote action failed', error));
+    pushOrderEvent({
+      orderId,
+      eventType: 'PRODUCT_PAYMENT_REPORTED',
+      actorType: 'customer',
+      actorId: customerId || 'customer-demo',
+      payload: { source: 'order_detail' },
+    }).catch((error) => reportRealtimeError('remote action failed', error));
+  };
+
+  const reportDeliveryPayment = () => {
+    if (!orderId) return;
+    updateOrderStatus(orderId, 'DELIVERY_PAYMENT_REPORTED');
+    syncOrderStatus(orderId, 'DELIVERY_PAYMENT_REPORTED').catch((error) => reportRealtimeError('remote action failed', error));
+    pushOrderEvent({
+      orderId,
+      eventType: 'DELIVERY_PAYMENT_REPORTED',
+      actorType: 'customer',
+      actorId: customerId || 'customer-demo',
+      payload: { source: 'order_detail' },
+    }).catch((error) => reportRealtimeError('remote action failed', error));
+  };
 
   return (
       <div className="order-detail-page">
@@ -309,6 +357,20 @@ export function OrderDetailPage() {
                 <span key={evt.id} className="status-pill" style={{ fontSize: '0.72rem' }}>{formatOrderEventType(evt.event_type)}</span>
               ))}
             </div>
+          </div>
+
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+            {(order.status === 'PENDING_PRODUCT_PAYMENT' || order.status === 'PENDING_PAYMENT') && (
+              <button className="higo-btn higo-btn-outline" onClick={reportProductPayment}>
+                Ya pagué al comercio
+              </button>
+            )}
+            {(order.status === 'PICKED_UP' || order.status === 'DRIVER_EN_ROUTE_TO_CUSTOMER' || order.status === 'DELIVERY_PAYMENT_PENDING') && (
+              <button className="higo-btn higo-btn-outline" onClick={reportDeliveryPayment}>
+                Ya pagué el envío al driver
+              </button>
+            )}
           </div>
 
           <div className="order-summary-header">

@@ -20,15 +20,15 @@ const reportRealtimeError = (action, error) => {
 };
 
 const STATUS_SECTIONS = [
-  { id: 'pending', label: 'Por Validar', icon: '💳', statuses: ['PENDING_PAYMENT'] },
-  { id: 'kitchen', label: 'En Cocina', icon: '👨‍🍳', statuses: ['PAYMENT_VERIFIED', 'PREPARING'] },
-  { id: 'dispatch', label: 'Por Despachar', icon: '📦', statuses: ['READY_TO_DISPATCH'] },
-  { id: 'delivered', label: 'Historial', icon: '🏁', statuses: ['DRIVER_ASSIGNED', 'PICKED_UP', 'DELIVERED', 'CANCELLED'] }
+  { id: 'pending', label: 'Por Validar', icon: '💳', statuses: ['PENDING_PRODUCT_PAYMENT', 'PRODUCT_PAYMENT_REPORTED', 'PENDING_PAYMENT'] },
+  { id: 'kitchen', label: 'En Cocina', icon: '👨‍🍳', statuses: ['PRODUCT_PAYMENT_VERIFIED', 'PAYMENT_VERIFIED', 'PREPARING'] },
+  { id: 'dispatch', label: 'Despacho', icon: '📦', statuses: ['READY_FOR_DRIVER_MATCH', 'READY_TO_DISPATCH', 'DRIVER_CANDIDATE_BROADCASTED'] },
+  { id: 'delivered', label: 'Historial', icon: '🏁', statuses: ['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE', 'PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED', 'DELIVERED', 'CANCELLED'] }
 ];
 
 export function MerchantDashboard() {
   const { orders, updateOrderStatus, assignDriver, upsertRemoteOrder } = useOrderStore();
-  const driverId = useAuthStore((s) => s.userId);
+  const merchantId = useAuthStore((s) => s.userId);
   const { chats, addMessage, initializeChat } = useChatStore();
   
   const [activeTab, setActiveTab] = useState('pending'); // pending | kitchen | dispatch | delivered
@@ -82,9 +82,9 @@ export function MerchantDashboard() {
 
   // Simulates Driver assignment upon dispatch
   const handleDispatchOrder = (orderId) => {
-    updateOrderStatus(orderId, 'READY_TO_DISPATCH');
-    syncOrderStatus(orderId, 'READY_TO_DISPATCH').catch((error) => reportRealtimeError("realtime action failed", error));
-    pushOrderEvent({ orderId, eventType: 'READY_TO_DISPATCH', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
+    updateOrderStatus(orderId, 'READY_FOR_DRIVER_MATCH');
+    syncOrderStatus(orderId, 'READY_FOR_DRIVER_MATCH').catch((error) => reportRealtimeError("realtime action failed", error));
+    pushOrderEvent({ orderId, eventType: 'ORDER_READY_FOR_DRIVER_MATCH', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     
     addMessage(orderId, 'storeMessages', {
       sender: 'store',
@@ -93,9 +93,13 @@ export function MerchantDashboard() {
 
     // Simulate driver matching in 4 seconds
     setTimeout(() => {
-      assignDriver(orderId, driverId);
-      syncOrderStatus(orderId, 'DRIVER_ASSIGNED', driverId).catch((error) => reportRealtimeError("realtime action failed", error));
-      pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'system', actorId: driverId, payload: { city: 'Higuerote', source: 'merchant_auto_assign' } }).catch((error) => reportRealtimeError("realtime action failed", error));
+      updateOrderStatus(orderId, 'DRIVER_CANDIDATE_BROADCASTED');
+      syncOrderStatus(orderId, 'DRIVER_CANDIDATE_BROADCASTED').catch((error) => reportRealtimeError("realtime action failed", error));
+      pushOrderEvent({ orderId, eventType: 'DRIVER_CANDIDATE_BROADCASTED', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
+
+      assignDriver(orderId, merchantId);
+      syncOrderStatus(orderId, 'DRIVER_ASSIGNED', merchantId).catch((error) => reportRealtimeError("realtime action failed", error));
+      pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'system', actorId: merchantId, payload: { city: 'Higuerote', source: 'merchant_auto_assign' } }).catch((error) => reportRealtimeError("realtime action failed", error));
       
       addMessage(orderId, 'driverMessages', {
         sender: 'driver',
@@ -205,20 +209,20 @@ export function MerchantDashboard() {
                 </div>
 
                 <div className="details-action-block__buttons">
-                  {selectedOrder.status === 'PENDING_PAYMENT' && (
+                  {(selectedOrder.status === 'PENDING_PAYMENT' || selectedOrder.status === 'PENDING_PRODUCT_PAYMENT' || selectedOrder.status === 'PRODUCT_PAYMENT_REPORTED') && (
                     <button
                       className="action-btn action-btn--success"
-                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PAYMENT_VERIFIED'); syncOrderStatus(selectedOrder.id, 'PAYMENT_VERIFIED').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PAYMENT_VERIFIED', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
+                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PRODUCT_PAYMENT_VERIFIED'); syncOrderStatus(selectedOrder.id, 'PRODUCT_PAYMENT_VERIFIED').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PRODUCT_PAYMENT_VERIFIED', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
                     >
                       <CheckCircle2 size={16} />
                       Confirmar Pago Recibido
                     </button>
                   )}
 
-                  {selectedOrder.status === 'PAYMENT_VERIFIED' && (
+                  {(selectedOrder.status === 'PAYMENT_VERIFIED' || selectedOrder.status === 'PRODUCT_PAYMENT_VERIFIED') && (
                     <button
                       className="action-btn action-btn--primary"
-                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PREPARING'); syncOrderStatus(selectedOrder.id, 'PREPARING').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PREPARING', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
+                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PREPARING'); syncOrderStatus(selectedOrder.id, 'PREPARING').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PREPARING', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
                     >
                       👨‍🍳 Iniciar Preparación
                     </button>
@@ -233,7 +237,7 @@ export function MerchantDashboard() {
                     </button>
                   )}
 
-                  {selectedOrder.status === 'READY_TO_DISPATCH' && (
+                  {(selectedOrder.status === 'READY_TO_DISPATCH' || selectedOrder.status === 'READY_FOR_DRIVER_MATCH' || selectedOrder.status === 'DRIVER_CANDIDATE_BROADCASTED') && (
                     <div className="merchant-searching-driver">
                       <Spinner size="sm" />
                       <span>Buscando Higo Driver disponible...</span>
@@ -247,7 +251,7 @@ export function MerchantDashboard() {
                     </div>
                   )}
 
-                  {selectedOrder.status === 'PICKED_UP' && (
+                  {(selectedOrder.status === 'PICKED_UP' || selectedOrder.status === 'DRIVER_EN_ROUTE_TO_CUSTOMER' || selectedOrder.status === 'DELIVERY_PAYMENT_PENDING' || selectedOrder.status === 'DELIVERY_PAYMENT_REPORTED' || selectedOrder.status === 'DELIVERY_PAYMENT_CONFIRMED') && (
                     <div className="merchant-assigned-driver">
                       <span className="icon">🚀</span>
                       <span>En tránsito — Driver lleva el pedido al cliente</span>

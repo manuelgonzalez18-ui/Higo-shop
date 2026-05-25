@@ -32,7 +32,7 @@ function DriverDeliveryMap({ storeLatLng, userLatLng, status }) {
   }), [storeLatLng.lat, storeLatLng.lng, userLatLng.lat, userLatLng.lng]);
 
   // Highlight different leg colors depending on driver progress.
-  const isEnRoute = status === 'PICKED_UP';
+  const isEnRoute = ['PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED'].includes(status);
   const routeColor = isEnRoute ? '#10B981' : '#3B82F6';
 
   return (
@@ -66,7 +66,7 @@ export function DriverDashboard() {
 
   const handleRealtimeOrder = useCallback((row) => {
     if (!row) return;
-    if (!['READY_TO_DISPATCH', 'DRIVER_ASSIGNED', 'PICKED_UP', 'DELIVERED'].includes(row.status)) return;
+    if (!['READY_TO_DISPATCH', 'READY_FOR_DRIVER_MATCH', 'DRIVER_CANDIDATE_BROADCASTED', 'DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE', 'PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED', 'DELIVERED'].includes(row.status)) return;
     upsertRemoteOrder({
       id: row.id,
       status: row.status,
@@ -89,14 +89,14 @@ export function DriverDashboard() {
 
   // 1. Filter available dispatchable orders in the zone (READY_TO_DISPATCH)
   const dispatchableOrders = useMemo(() => {
-    return orders.filter(o => o.status === 'READY_TO_DISPATCH');
+    return orders.filter(o => ['READY_TO_DISPATCH', 'READY_FOR_DRIVER_MATCH', 'DRIVER_CANDIDATE_BROADCASTED'].includes(o.status));
   }, [orders]);
 
   // 2. Filter orders assigned to this authenticated driver that are active
   const myActiveOrders = useMemo(() => {
     return orders.filter(o => 
       o.driverId === driverId && 
-      ['DRIVER_ASSIGNED', 'PICKED_UP'].includes(o.status)
+      ['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE', 'PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED'].includes(o.status)
     );
   }, [orders]);
 
@@ -143,8 +143,8 @@ export function DriverDashboard() {
 
   const handleAcceptDelivery = (orderId) => {
     assignDriver(orderId, driverId);
-    syncOrderStatus(orderId, 'DRIVER_ASSIGNED', driverId).catch((error) => reportRealtimeError("realtime action failed", error));
-    pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
+    syncOrderStatus(orderId, 'DRIVER_EN_ROUTE_TO_STORE', driverId).catch((error) => reportRealtimeError("realtime action failed", error));
+    pushOrderEvent({ orderId, eventType: 'DRIVER_EN_ROUTE_TO_STORE', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     
     // Add greeting message
     addMessage(orderId, 'driverMessages', {
@@ -166,12 +166,26 @@ export function DriverDashboard() {
 
   const handlePickupPackage = (orderId) => {
     pushOrderEvent({ orderId, eventType: 'ORDER_PICKED_UP', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
-    updateOrderStatus(orderId, 'PICKED_UP');
-    syncOrderStatus(orderId, 'PICKED_UP').catch((error) => reportRealtimeError("realtime action failed", error));
+    updateOrderStatus(orderId, 'DRIVER_EN_ROUTE_TO_CUSTOMER');
+    syncOrderStatus(orderId, 'DRIVER_EN_ROUTE_TO_CUSTOMER').catch((error) => reportRealtimeError("realtime action failed", error));
+    pushOrderEvent({ orderId, eventType: 'DRIVER_EN_ROUTE_TO_CUSTOMER', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     
     addMessage(orderId, 'driverMessages', {
       sender: 'driver',
       text: '🚀 ¡Pedido retirado con éxito! Voy en camino a tu ubicación. Ya puedes rastrearme en el mapa.'
+    });
+  };
+
+
+
+  const handleConfirmDeliveryPayment = (orderId) => {
+    pushOrderEvent({ orderId, eventType: 'DELIVERY_PAYMENT_CONFIRMED', actorType: 'driver', actorId: driverId, payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
+    updateOrderStatus(orderId, 'DELIVERY_PAYMENT_CONFIRMED');
+    syncOrderStatus(orderId, 'DELIVERY_PAYMENT_CONFIRMED').catch((error) => reportRealtimeError("realtime action failed", error));
+
+    addMessage(orderId, 'driverMessages', {
+      sender: 'driver',
+      text: '💵 Pago de envío confirmado. Procedo a cerrar la entrega. ¡Gracias!'
     });
   };
 
@@ -188,7 +202,7 @@ export function DriverDashboard() {
 
 
   useEffect(() => {
-    if (!selectedOrder || !['DRIVER_ASSIGNED', 'PICKED_UP'].includes(selectedOrder.status)) return;
+    if (!selectedOrder || !['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE', 'PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED'].includes(selectedOrder.status)) return;
     const timer = setInterval(() => {
       if (!navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition((position) => {
@@ -254,7 +268,7 @@ export function DriverDashboard() {
                 <DriverDeliveryMap
                   storeLatLng={selectedOrder.storeLocation}
                   userLatLng={selectedOrder.userLocation}
-                  status={formatOrderStatus(selectedOrder.status)}
+                  status={selectedOrder.status}
                 />
               )}
 
@@ -313,7 +327,7 @@ export function DriverDashboard() {
 
               {/* ACTION BUTTONS */}
               <div className="driver-action-buttons">
-                {selectedOrder.status === 'READY_TO_DISPATCH' && (
+                {['READY_TO_DISPATCH', 'READY_FOR_DRIVER_MATCH', 'DRIVER_CANDIDATE_BROADCASTED'].includes(selectedOrder.status) && (
                   <button
                     className="driver-btn driver-btn--primary"
                     onClick={() => handleAcceptDelivery(selectedOrder.id)}
@@ -322,7 +336,7 @@ export function DriverDashboard() {
                   </button>
                 )}
 
-                {selectedOrder.status === 'DRIVER_ASSIGNED' && (
+                {['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE'].includes(selectedOrder.status) && (
                   <button
                     className="driver-btn driver-btn--success"
                     onClick={() => handlePickupPackage(selectedOrder.id)}
@@ -331,7 +345,22 @@ export function DriverDashboard() {
                   </button>
                 )}
 
-                {selectedOrder.status === 'PICKED_UP' && (
+                {(selectedOrder.status === 'DELIVERY_PAYMENT_REPORTED') && (
+                  <button
+                    className="driver-btn driver-btn--success"
+                    onClick={() => handleConfirmDeliveryPayment(selectedOrder.id)}
+                  >
+                    💵 Confirmar pago de envío recibido
+                  </button>
+                )}
+
+                {['PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING'].includes(selectedOrder.status) && (
+                  <div className="driver-status-delivered" style={{ borderStyle: 'dashed' }}>
+                    <span>⏳ Pendiente confirmar pago de envío para cerrar entrega</span>
+                  </div>
+                )}
+
+                {['DELIVERY_PAYMENT_CONFIRMED'].includes(selectedOrder.status) && (
                   <button
                     className="driver-btn driver-btn--complete"
                     onClick={() => handleDeliverPackage(selectedOrder.id)}
@@ -384,11 +413,11 @@ export function DriverDashboard() {
                 placeholder="Escribe al cliente..."
                 value={chatInputText}
                 onChange={(e) => setChatInputText(e.target.value)}
-                disabled={['READY_TO_DISPATCH', 'DELIVERED'].includes(selectedOrder.status)}
+                disabled={['READY_TO_DISPATCH', 'READY_FOR_DRIVER_MATCH', 'DRIVER_CANDIDATE_BROADCASTED', 'DELIVERED'].includes(selectedOrder.status)}
               />
               <button
                 type="submit"
-                disabled={!chatInputText.trim() || ['READY_TO_DISPATCH', 'DELIVERED'].includes(selectedOrder.status)}
+                disabled={!chatInputText.trim() || ['READY_TO_DISPATCH', 'READY_FOR_DRIVER_MATCH', 'DRIVER_CANDIDATE_BROADCASTED', 'DELIVERED'].includes(selectedOrder.status)}
               >
                 <Send size={15} />
               </button>
