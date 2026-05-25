@@ -172,10 +172,14 @@ export function OrderDetailPage() {
 
     initializeChat(orderId);
 
-    fetchStoreById(order.storeId).then(data => {
-      setStore(data);
-      setIsLoadingStore(false);
-    });
+    fetchStoreById(order.storeId)
+      .then(data => {
+        setStore(data);
+      })
+      .catch((error) => reportRealtimeError('store fetch failed', error))
+      .finally(() => {
+        setIsLoadingStore(false);
+      });
   }, [orderId, order?.storeId]);
 
   useEffect(() => {
