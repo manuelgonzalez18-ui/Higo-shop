@@ -3,18 +3,23 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Store, Truck, Navigation, Clock,
-  Send, ShieldAlert, Image, Check, Smartphone, Sparkles
+  Send, ShieldAlert, Image, Check
 } from 'lucide-react';
 import { useOrderStore } from '../../../stores/useOrderStore.js';
+import { subscribeToOrder } from '../../../services/orderRealtimeService.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { fetchStoreById } from '../../../services/storeService.js';
+import { fetchOrderByIdRemote } from '../../../services/orderService.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
-import { formatDurationMin, bearingBetween } from '../../../services/geolocation.js';
+import { formatDurationMin } from '../../../services/geolocation.js';
 import { useDirections } from '../../../hooks/useDirections.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
+import { useLiveDriverTracking } from '../../../hooks/useLiveDriverTracking.js';
+import { useOrderEvents } from '../../../hooks/useOrderEvents.js';
 import { MapView, AutoFitBounds } from '../../../components/maps/MapView.jsx';
 import { EmojiMarker } from '../../../components/maps/EmojiMarker.jsx';
 import { RoutePolyline } from '../../../components/maps/RoutePolyline.jsx';
+import { formatOrderEventType, formatOrderStatus } from '../../../services/orderStatus.js';
 import './OrderDetailPage.css';
 
 const STATUS_STEPS = [
@@ -26,22 +31,6 @@ const STATUS_STEPS = [
   { id: 'PICKED_UP', label: 'En Camino', icon: '🚀' },
   { id: 'DELIVERED', label: 'Entregado', icon: '🏁' }
 ];
-
-// Computes driver position along a polyline path given a 0..1 progress ratio.
-function interpolateAlongPath(path, ratio) {
-  if (!path || path.length < 2) return null;
-  if (ratio <= 0) return path[0];
-  if (ratio >= 1) return path[path.length - 1];
-  const target = ratio * (path.length - 1);
-  const idx = Math.floor(target);
-  const frac = target - idx;
-  const a = path[idx];
-  const b = path[idx + 1];
-  return {
-    lat: a.lat + (b.lat - a.lat) * frac,
-    lng: a.lng + (b.lng - a.lng) * frac,
-  };
-}
 
 function TrackingMap({
   storeLatLng,
@@ -98,20 +87,42 @@ export function OrderDetailPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
 
-  const { getOrderById, updateOrderStatus } = useOrderStore();
+  const { getOrderById, updateOrderStatus, upsertRemoteOrder } = useOrderStore();
   const { chats, initializeChat, addMessage } = useChatStore();
 
-  const order = getOrderById(orderId);
+  const localOrder = getOrderById(orderId);
+  const [remoteOrder, setRemoteOrder] = useState(null);
+  const [isLoadingOrder, setIsLoadingOrder] = useState(true);
   const [store, setStore] = useState(null);
   const [isLoadingStore, setIsLoadingStore] = useState(true);
   const [activeTab, setActiveTab] = useState('store');
   const [inputText, setInputText] = useState('');
 
   const chatEndRef = useRef(null);
-  const simulationTimers = useRef([]);
 
-  const [currentLeg, setCurrentLeg] = useState('none');
-  const [legStep, setLegStep] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!orderId) return;
+    fetchOrderByIdRemote(orderId)
+      .then((row) => {
+        if (!mounted) return;
+        setRemoteOrder(row);
+        upsertRemoteOrder(row);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (mounted) setIsLoadingOrder(false);
+      });
+    return () => { mounted = false; };
+  }, [orderId]);
+
+  const order = useMemo(() => {
+    if (!localOrder && !remoteOrder) return null;
+    if (!remoteOrder) return localOrder;
+    if (!localOrder) return remoteOrder;
+    return { ...localOrder, ...remoteOrder, items: localOrder.items || [] };
+  }, [localOrder, remoteOrder]);
 
   // Geometry derived from order (safe even before order exists — guarded).
   const storeLatLng = useMemo(() => order ? ({
@@ -124,43 +135,32 @@ export function OrderDetailPage() {
     lat: storeLatLng.lat + 0.006, lng: storeLatLng.lng - 0.008,
   }) : null, [storeLatLng?.lat, storeLatLng?.lng]);
 
+  const currentLeg = useMemo(() => {
+    if (!order) return 'none';
+    if (order.status === 'DRIVER_ASSIGNED') return 'to_store';
+    if (order.status === 'PICKED_UP') return 'to_client';
+    if (order.status === 'DELIVERED') return 'delivered';
+    return 'none';
+  }, [order?.status]);
+
   const legOrigin = currentLeg === 'to_store' ? driverStartLatLng : storeLatLng;
   const legDest = currentLeg === 'to_store' ? storeLatLng : userLatLng;
 
   const { path: legPath, duration: legDurationSec } = useDirections(legOrigin, legDest);
   const { path: fullDeliveryPath } = useDirections(storeLatLng, userLatLng);
 
-  const totalSteps = currentLeg === 'to_store' ? 10 : 12;
-  const ratio = Math.min(1, legStep / totalSteps);
-  const driverPos = useMemo(() => {
-    if (!storeLatLng || !userLatLng) return null;
-    if (currentLeg === 'delivered') return userLatLng;
-    if (currentLeg === 'at_store') return storeLatLng;
-    if (currentLeg === 'none') return driverStartLatLng;
-    return interpolateAlongPath(legPath || [legOrigin, legDest], ratio) || driverStartLatLng;
-  }, [currentLeg, legPath, ratio, userLatLng, storeLatLng, driverStartLatLng, legOrigin, legDest]);
+  const { driverPos: liveDriverPos, driverBearing: liveDriverBearing, signalAgeSec } = useLiveDriverTracking(orderId, driverStartLatLng);
 
-  // Bearing derived from the next path segment so the driver arrow looks
-  // forward instead of lagging behind. Falls back to previous→current when
-  // we're at the end of the path.
-  const driverBearing = useMemo(() => {
-    if (!driverPos) return null;
-    if (currentLeg !== 'to_store' && currentLeg !== 'to_client') return null;
-    const path = legPath;
-    if (!path || path.length < 2) return bearingBetween(legOrigin, legDest);
-    const target = ratio * (path.length - 1);
-    const idx = Math.min(path.length - 2, Math.floor(target));
-    return bearingBetween(path[idx], path[idx + 1]);
-  }, [driverPos, currentLeg, legPath, ratio, legOrigin, legDest]);
+  const resolvedDriverPos = liveDriverPos || (currentLeg === 'delivered' ? userLatLng : driverStartLatLng);
+  const resolvedDriverBearing = liveDriverBearing ?? null;
 
-  // Live ETA = remaining fraction of Google's total leg duration.
   const remainingEtaText = useMemo(() => {
     if (legDurationSec == null) return null;
     if (currentLeg === 'to_store' || currentLeg === 'to_client') {
-      return formatDurationMin(legDurationSec * (1 - ratio));
+      return formatDurationMin(legDurationSec);
     }
     return null;
-  }, [legDurationSec, ratio, currentLeg]);
+  }, [legDurationSec, currentLeg]);
 
   useEffect(() => {
     if (!order) return;
@@ -171,93 +171,37 @@ export function OrderDetailPage() {
       setStore(data);
       setIsLoadingStore(false);
     });
-
-    if (order.status === 'DRIVER_ASSIGNED') {
-      setCurrentLeg('to_store');
-      setLegStep(0);
-    } else if (order.status === 'PICKED_UP') {
-      setCurrentLeg('to_client');
-      setLegStep(0);
-    } else if (order.status === 'DELIVERED') {
-      setCurrentLeg('delivered');
-      setLegStep(12);
-    } else {
-      setCurrentLeg('none');
-      setLegStep(0);
-    }
-  }, [orderId, order?.status]);
+  }, [orderId, order?.storeId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chats, activeTab]);
 
   useEffect(() => {
-    return () => {
-      simulationTimers.current.forEach(t => clearTimeout(t));
-    };
-  }, []);
+    if (!orderId) return;
+    const unsubscribe = subscribeToOrder(orderId, (row) => {
+      if (!row) return;
+      const mapped = {
+        id: row.id,
+        status: row.status,
+        updatedAt: row.updated_at,
+        driverId: row.driver_id,
+      };
+      upsertRemoteOrder(mapped);
+      if (row?.status) updateOrderStatus(orderId, row.status);
+    });
+    return unsubscribe;
+  }, [orderId, updateOrderStatus, upsertRemoteOrder]);
 
-  // Leg 1: animate driver to store
-  useEffect(() => {
-    if (!order || currentLeg !== 'to_store') return;
-    const totalSteps = 10;
-    const interval = setInterval(() => {
-      setLegStep(prev => {
-        const nextStep = prev + 1;
-        if (nextStep >= totalSteps) {
-          clearInterval(interval);
-          setCurrentLeg('at_store');
-          addMessage(orderId, 'driverMessages', {
-            sender: 'driver',
-            text: '🏪 Ya he llegado a la tienda. Estoy esperando el empaquetado final de tu pedido.',
-          });
-          return totalSteps;
-        }
-        return nextStep;
-      });
-    }, 1500);
-    return () => clearInterval(interval);
-  }, [currentLeg]);
 
-  // Leg 2: wait at store, then trigger pickup
-  useEffect(() => {
-    if (!order || currentLeg !== 'at_store') return;
-    const timer = setTimeout(() => {
-      updateOrderStatus(orderId, 'PICKED_UP');
-      addMessage(orderId, 'driverMessages', {
-        sender: 'driver',
-        text: '🚀 ¡Pedido retirado con éxito! Voy conduciendo en dirección a tu domicilio. Puedes seguirme en vivo en el mapa.',
-      });
-      addMessage(orderId, 'storeMessages', {
-        sender: 'store',
-        text: '📦 El driver retiró tu paquete y va en camino a entregártelo. ¡Buen provecho!'
-      });
-    }, 4500);
-    return () => clearTimeout(timer);
-  }, [currentLeg]);
-
-  // Leg 3: animate driver to client
-  useEffect(() => {
-    if (!order || currentLeg !== 'to_client') return;
-    const totalSteps = 12;
-    const interval = setInterval(() => {
-      setLegStep(prev => {
-        const nextStep = prev + 1;
-        if (nextStep >= totalSteps) {
-          clearInterval(interval);
-          setCurrentLeg('delivered');
-          updateOrderStatus(orderId, 'DELIVERED');
-          addMessage(orderId, 'driverMessages', {
-            sender: 'driver',
-            text: '👋 ¡He llegado! Estoy afuera con tu pedido listo. ¡Gracias por elegir Higo Shop!',
-          });
-          return totalSteps;
-        }
-        return nextStep;
-      });
-    }, 1500);
-    return () => clearInterval(interval);
-  }, [currentLeg]);
+  if (isLoadingOrder) {
+    return (
+      <div className="order-detail-page" style={{ padding: '2rem', textAlign: 'center' }}>
+        <Spinner size="lg" />
+        <p style={{ marginTop: '1rem', color: 'var(--higo-gray-500)' }}>Cargando pedido...</p>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -270,6 +214,7 @@ export function OrderDetailPage() {
     );
   }
 
+  const orderEvents = useOrderEvents(orderId);
   const orderChat = chats[orderId] || { storeMessages: [], driverMessages: [] };
   const currentMessages = activeTab === 'store' ? orderChat.storeMessages : orderChat.driverMessages;
 
@@ -280,86 +225,6 @@ export function OrderDetailPage() {
     setInputText('');
     const targetTab = activeTab === 'store' ? 'storeMessages' : 'driverMessages';
     addMessage(orderId, targetTab, { sender: 'customer', text });
-
-    if (activeTab === 'store') {
-      const timer = setTimeout(() => {
-        addMessage(orderId, 'storeMessages', {
-          sender: 'store',
-          text: 'Recibimos tu mensaje. Nuestro equipo está atento a tu orden. ¡Muchas gracias por escribirnos! 👍'
-        });
-      }, 2500);
-      simulationTimers.current.push(timer);
-    } else {
-      const timer = setTimeout(() => {
-        addMessage(orderId, 'driverMessages', {
-          sender: 'driver',
-          text: '¡Entendido! Ya voy conduciendo para entregarte tu pedido lo antes posible. 🛵⚡'
-        });
-      }, 2000);
-      simulationTimers.current.push(timer);
-    }
-  };
-
-  const handleSimulatePaymentProof = () => {
-    addMessage(orderId, 'storeMessages', {
-      sender: 'customer',
-      text: '📄 Comprobante_Pago_Movil.jpg',
-      image: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=300&auto=format&fit=crop&q=60'
-    });
-
-    const t1 = setTimeout(() => {
-      addMessage(orderId, 'storeMessages', {
-        sender: 'store',
-        text: '👋 ¡Hola! Recibimos el capture de tu Pago Móvil. Estamos validando la referencia en nuestra cuenta bancaria. Demorará unos segundos.'
-      });
-    }, 2000);
-    simulationTimers.current.push(t1);
-
-    const t2 = setTimeout(() => {
-      updateOrderStatus(orderId, 'PAYMENT_VERIFIED');
-      addMessage(orderId, 'storeMessages', {
-        sender: 'store',
-        text: `💰 ¡Listo! Pago verificado en cuenta. Su pedido por total de ${formatCurrency(order.productTotal)} ha sido aprobado. Pasa a cocina inmediatamente.`
-      });
-    }, 4500);
-    simulationTimers.current.push(t2);
-
-    const t3 = setTimeout(() => {
-      updateOrderStatus(orderId, 'PREPARING');
-      addMessage(orderId, 'storeMessages', {
-        sender: 'store',
-        text: '👨‍🍳 Tu pedido ya se está preparando con ingredientes frescos. ¡Huele delicioso!'
-      });
-    }, 8500);
-    simulationTimers.current.push(t3);
-
-    const t4 = setTimeout(() => {
-      updateOrderStatus(orderId, 'READY_TO_DISPATCH');
-      addMessage(orderId, 'storeMessages', {
-        sender: 'store',
-        text: '📦 ¡Pedido listo y empaquetado! Buscando al Higo Driver más cercano para el retiro...'
-      });
-    }, 12500);
-    simulationTimers.current.push(t4);
-
-    const t5 = setTimeout(() => {
-      updateOrderStatus(orderId, 'DRIVER_ASSIGNED');
-      addMessage(orderId, 'driverMessages', {
-        sender: 'driver',
-        text: '🛵 Higo Driver "Carlos Mendoza" ha aceptado el despacho.',
-        system: true
-      });
-      addMessage(orderId, 'driverMessages', {
-        sender: 'driver',
-        text: '¡Buenas noches! Soy Carlos Mendoza, tu Higo Driver asignado. Ya arranqué y voy conduciendo en dirección a la tienda para recoger tu pedido. 💨'
-      });
-      addMessage(orderId, 'storeMessages', {
-        sender: 'store',
-        text: '🛵 El driver Carlos Mendoza ha sido asignado y va en camino a retirar el paquete.'
-      });
-      setActiveTab('driver');
-    }, 16500);
-    simulationTimers.current.push(t5);
   };
 
   const getStepIndex = (status) => STATUS_STEPS.findIndex(s => s.id === status);
@@ -373,7 +238,7 @@ export function OrderDetailPage() {
           </button>
           <div>
             <h2>Seguimiento de Orden</h2>
-            <span className="order-id-label">Ref: {order.id.slice(0, 8)}...</span>
+            <span className="order-id-label">Ref: {order.id.slice(0, 8)}... · {formatOrderStatus(order.status)}</span>
           </div>
         </div>
 
@@ -382,8 +247,8 @@ export function OrderDetailPage() {
           <TrackingMap
             storeLatLng={storeLatLng}
             userLatLng={userLatLng}
-            driverPos={driverPos}
-            driverBearing={driverBearing}
+            driverPos={resolvedDriverPos}
+            driverBearing={resolvedDriverBearing}
             currentLeg={currentLeg}
             legPath={legPath}
             fullDeliveryPath={fullDeliveryPath}
@@ -394,13 +259,20 @@ export function OrderDetailPage() {
               <Clock size={14} className="spinning-icon" />
               <span>
                 {currentLeg === 'to_store' && `Repartidor en camino a la tienda${remainingEtaText ? ` · ${remainingEtaText}` : '...'}`}
-                {currentLeg === 'at_store' && 'Repartidor en tienda verificando pedido...'}
                 {currentLeg === 'to_client' && `¡Pedido en camino${remainingEtaText ? ` · llega en ${remainingEtaText}` : ' a tu dirección!'}`}
                 {currentLeg === 'delivered' && '¡Entregado! Disfruta tu compra'}
               </span>
             </div>
           )}
         </div>
+
+        
+          {signalAgeSec != null && (
+            <div className="floating-driver-eta" style={{ top: '0.75rem', bottom: 'auto' }}>
+              <Navigation size={14} />
+              <span>{signalAgeSec <= 10 ? 'Ubicación en vivo' : `Última señal hace ${signalAgeSec}s`}</span>
+            </div>
+          )}
 
         {/* FLOATING BOTTOM PANEL */}
         <div className="order-detail-bottom-panel">
@@ -426,6 +298,16 @@ export function OrderDetailPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+
+          <div style={{ marginBottom: '0.6rem' }}>
+            <strong style={{ fontSize: '0.9rem' }}>Eventos en vivo</strong>
+            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+              {orderEvents.slice(0, 3).map((evt) => (
+                <span key={evt.id} className="status-pill" style={{ fontSize: '0.72rem' }}>{formatOrderEventType(evt.event_type)}</span>
+              ))}
             </div>
           </div>
 
@@ -497,25 +379,6 @@ export function OrderDetailPage() {
               <div ref={chatEndRef} />
             </div>
 
-            {activeTab === 'store' && order.status === 'PENDING_PAYMENT' && (
-              <motion.div
-                className="payment-prompt-bar"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <div className="payment-prompt-info">
-                  <Smartphone size={16} />
-                  <span>Realiza tu Pago Móvil de <strong>{formatCurrency(order.productTotal)}</strong> y reporta tu comprobante aquí.</span>
-                </div>
-                <button
-                  className="payment-report-btn"
-                  onClick={handleSimulatePaymentProof}
-                >
-                  <Sparkles size={14} />
-                  Reportar Pago (Simulado)
-                </button>
-              </motion.div>
-            )}
 
             <form className="chat-input-bar" onSubmit={handleSendMessage}>
               <input
