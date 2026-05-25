@@ -84,7 +84,7 @@ export function MerchantDashboard() {
   const handleDispatchOrder = (orderId) => {
     updateOrderStatus(orderId, 'READY_FOR_DRIVER_MATCH');
     syncOrderStatus(orderId, 'READY_FOR_DRIVER_MATCH').catch((error) => reportRealtimeError("realtime action failed", error));
-    pushOrderEvent({ orderId, eventType: 'ORDER_READY_FOR_DRIVER_MATCH', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
+    pushOrderEvent({ orderId, eventType: 'ORDER_READY_FOR_DRIVER_MATCH', actorType: 'merchant', actorId: 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
     
     addMessage(orderId, 'storeMessages', {
       sender: 'store',
@@ -95,7 +95,7 @@ export function MerchantDashboard() {
     setTimeout(() => {
       updateOrderStatus(orderId, 'DRIVER_CANDIDATE_BROADCASTED');
       syncOrderStatus(orderId, 'DRIVER_CANDIDATE_BROADCASTED').catch((error) => reportRealtimeError("realtime action failed", error));
-      pushOrderEvent({ orderId, eventType: 'DRIVER_CANDIDATE_BROADCASTED', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
+      pushOrderEvent({ orderId, eventType: 'DRIVER_CANDIDATE_BROADCASTED', actorType: 'merchant', actorId: 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
 
       assignDriver(orderId, driverId);
       syncOrderStatus(orderId, 'DRIVER_ASSIGNED', driverId).catch((error) => reportRealtimeError("realtime action failed", error));
@@ -212,7 +212,7 @@ export function MerchantDashboard() {
                   {(selectedOrder.status === 'PENDING_PAYMENT' || selectedOrder.status === 'PENDING_PRODUCT_PAYMENT' || selectedOrder.status === 'PRODUCT_PAYMENT_REPORTED') && (
                     <button
                       className="action-btn action-btn--success"
-                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PRODUCT_PAYMENT_VERIFIED'); syncOrderStatus(selectedOrder.id, 'PRODUCT_PAYMENT_VERIFIED').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PRODUCT_PAYMENT_VERIFIED', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
+                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PRODUCT_PAYMENT_VERIFIED'); syncOrderStatus(selectedOrder.id, 'PRODUCT_PAYMENT_VERIFIED').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PRODUCT_PAYMENT_VERIFIED', actorType: 'merchant', actorId: 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
                     >
                       <CheckCircle2 size={16} />
                       Confirmar Pago Recibido
@@ -222,7 +222,7 @@ export function MerchantDashboard() {
                   {(selectedOrder.status === 'PAYMENT_VERIFIED' || selectedOrder.status === 'PRODUCT_PAYMENT_VERIFIED') && (
                     <button
                       className="action-btn action-btn--primary"
-                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PREPARING'); syncOrderStatus(selectedOrder.id, 'PREPARING').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PREPARING', actorType: 'merchant', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
+                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PREPARING'); syncOrderStatus(selectedOrder.id, 'PREPARING').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PREPARING', actorType: 'merchant', actorId: 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
                     >
                       👨‍🍳 Iniciar Preparación
                     </button>
