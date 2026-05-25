@@ -131,13 +131,18 @@
 .quick-pills-bar {
   display: flex;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3) var(--space-4) 0 var(--space-4);
   overflow-x: auto;
   scrollbar-width: none;
 }
 
 .quick-pills-bar::-webkit-scrollbar {
   display: none;
+}
+
+.quick-pills-bar::after {
+  content: '';
+  flex: 0 0 var(--space-2);
 }
 
 .quick-pill {
@@ -240,12 +245,17 @@
   display: flex;
   gap: var(--space-3);
   overflow-x: auto;
-  padding: 0 var(--space-4) var(--space-2);
+  padding: 0 var(--space-4) var(--space-2) var(--space-4);
   scrollbar-width: none;
 }
 
 .promotions-scroll::-webkit-scrollbar {
   display: none;
+}
+
+.promotions-scroll::after {
+  content: '';
+  flex: 0 0 var(--space-2);
 }
 
 .promo-card {
