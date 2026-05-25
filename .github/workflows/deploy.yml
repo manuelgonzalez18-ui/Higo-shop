@@ -102,6 +102,44 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update && sudo apt-get install -y lftp
 
+      # FAIL-FAST: verifica que el FTP responda y que el login sea valido
+      # ANTES de lanzar el mirror largo. Distingue "server caido / credencial
+      # invalida" (abortamos en <60s) de "server arriba pero AV lockeando
+      # archivos" (dejamos que el mirror reintente, que es el caso legitimo
+      # para el que estan tuneados los timeouts largos de abajo).
+      #
+      # Incidente 2026-05-24 (run 26372323353): el FTP de Hostinger dejo de
+      # responder y el mirror colgo 28m57s reintentando con "max-retries
+      # exceeded" en cada archivo. Subir los timeouts solo hizo el fallo mas
+      # largo, no lo evito. Este preflight corta de raiz ese caso.
+      #
+      # Budget: net:timeout 15 x max-retries 1 + 1 reconnect ~= 35s, con un
+      # hard ceiling de 60s via coreutils `timeout`.
+      - name: FTP preflight (fail-fast)
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then
+            echo "::error::Faltan secrets FTP (FTP_SERVER / FTP_USERNAME / FTP_PASSWORD). Cargalos en Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          echo "Probando conexion FTP a $FTP_SERVER (budget ~60s)..."
+          if ! timeout 60 lftp -c "
+          set ftp:ssl-allow no;
+          set ssl:verify-certificate no;
+          set net:timeout 15;
+          set net:max-retries 1;
+          set net:reconnect-interval-base 3;
+          open -u '$FTP_USERNAME','$FTP_PASSWORD' '$FTP_SERVER';
+          pwd;
+          "; then
+            echo "::error::FTP preflight fallo — el servidor de Hostinger no respondio o las credenciales son invalidas. Deploy abortado en fail-fast (NO se intento el mirror para no colgar el runner ~29 min). Verifica: (1) que el FTP de Hostinger este arriba probando login con FileZilla, (2) que la cuenta/hosting no este suspendida, (3) que los secrets FTP sigan vigentes."
+            exit 1
+          fi
+          echo "✓ FTP responde y login OK — procediendo al mirror."
+
       # NOTA sobre --no-perms:
       # Hostinger no le permite a este FTP user hacer `SITE CHMOD`. lftp
       # por default intenta preservar permisos del archivo local y emite
@@ -151,10 +189,17 @@ jobs:
         # backoff 1.4 + max=3 outer attempts. Worst case ~12 min — mas que
         # los 3 min del pase anterior pero suficiente para sobrevivir
         # lockouts tipicos del AV sin abortar el deploy.
+        # Cada intento del mirror va envuelto en `timeout 240` (hard ceiling
+        # por intento): el preflight ya confirmo conectividad, asi que si el
+        # server se cae A MITAD del deploy, cortamos el intento a los 4 min en
+        # vez de dejar que lftp queme timeout 40 x 5 retries por archivo. Con
+        # max=3 intentos + sleeps de 15s, el worst case queda acotado a ~12 min
+        # (vs los ~29 min del incidente). `timeout` devuelve 124 al cortar, que
+        # dispara el retry del loop bash igual que cualquier otro fallo.
         run: |
           attempt=0
           max=3
-          until lftp -c "
+          until timeout 240 lftp -c "
           set ftp:ssl-allow no;
           set ssl:verify-certificate no;
           set net:timeout 40;
