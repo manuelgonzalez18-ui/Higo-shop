@@ -124,6 +124,25 @@ export async function fetchDispatchableOrdersRemote() {
   return (data || []).map(mapOrderRow);
 }
 
+// Persiste la referencia de pago (de Pago Móvil) que reportó el cliente
+// o que ingresa el comercio al verificar. `kind` define cuál de las dos
+// fases del pago dividido estamos guardando.
+export async function setOrderPaymentReference(orderId, kind, reference) {
+  if (!orderId) throw new Error('orderService: orderId requerido');
+  if (kind !== 'product' && kind !== 'delivery') {
+    throw new Error(`orderService: kind inválido (${kind})`);
+  }
+  const column = kind === 'product'
+    ? 'product_payment_reference'
+    : 'delivery_payment_reference';
+
+  const { error } = await supabase
+    .from('orders')
+    .update({ [column]: reference, updated_at: new Date().toISOString() })
+    .eq('id', orderId);
+  if (error) throw error;
+}
+
 export async function fetchStoreOrdersRemote(storeId) {
   assertNonEmptyId(storeId, 'storeId');
 

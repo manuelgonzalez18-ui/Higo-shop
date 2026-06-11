@@ -1,0 +1,107 @@
+.merchant-products { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
+
+.merchant-products__toolbar {
+  display: flex; gap: 8px; align-items: center;
+}
+.merchant-products__search {
+  flex: 1;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--higo-gray-50, #f8fafc);
+  border: 1px solid var(--higo-gray-200, #e2e8f0);
+  border-radius: 10px;
+  padding: 6px 10px;
+  color: var(--higo-gray-500, #64748b);
+}
+.merchant-products__search input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 14px; color: var(--higo-gray-900, #0f172a);
+}
+.merchant-products__add {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: none; background: var(--higo-blue, #3b82f6); color: #fff;
+  padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 600;
+  font-size: 13px;
+}
+
+.merchant-products__error {
+  background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;
+  padding: 8px 10px; border-radius: 8px; font-size: 13px;
+}
+
+.merchant-products__form {
+  overflow: hidden;
+  border: 1px solid var(--higo-gray-200, #e2e8f0);
+  border-radius: 14px;
+  background: var(--higo-surface, #fff);
+}
+.merchant-products__form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px;
+}
+.merchant-products__form-grid label {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 12px; color: var(--higo-gray-500, #64748b); font-weight: 600;
+}
+.merchant-products__form-grid input,
+.merchant-products__form-grid textarea {
+  border: 1px solid var(--higo-gray-200, #e2e8f0);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--higo-gray-900, #0f172a);
+  background: #fff;
+}
+.merchant-products__check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  font-size: 13px !important;
+}
+.merchant-products__full { grid-column: 1 / -1; }
+.merchant-products__form-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 0 12px 12px;
+}
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: 1px solid var(--higo-gray-200, #e2e8f0); background: transparent;
+  padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  color: var(--higo-gray-600, #475569);
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: none; background: var(--higo-blue, #3b82f6); color: #fff;
+  padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
+}
+
+.merchant-loading, .merchant-empty {
+  text-align: center; padding: 30px 12px;
+  color: var(--higo-gray-400, #94a3b8); font-size: 13px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+
+.merchant-products__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.merchant-product {
+  display: flex; gap: 10px; padding: 10px;
+  border: 1px solid var(--higo-gray-200, #e2e8f0);
+  border-radius: 12px; background: #fff;
+}
+.merchant-product--off { opacity: 0.55; }
+.merchant-product__main { flex: 1; min-width: 0; }
+.merchant-product__name { font-weight: 700; color: var(--higo-gray-900, #0f172a); }
+.merchant-product__meta { display: flex; gap: 10px; font-size: 12px; margin-top: 2px; }
+.merchant-product__cat { color: var(--higo-gray-500, #64748b); }
+.merchant-product__price { color: var(--higo-blue, #3b82f6); font-weight: 700; }
+.merchant-product__desc { margin: 4px 0 0; font-size: 12px; color: var(--higo-gray-500, #64748b); }
+.merchant-product__actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.merchant-product__actions button {
+  border: 1px solid var(--higo-gray-200, #e2e8f0); background: #fff;
+  width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+  display: grid; place-items: center; color: var(--higo-gray-500, #64748b);
+}
+.merchant-product__toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--higo-gray-500, #64748b);
+}

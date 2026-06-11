@@ -117,3 +117,56 @@ export async function fetchProductsByStoreId(storeId) {
   // Local fallback
   return mockProducts[storeId] || [];
 }
+
+/**
+ * Devuelve la primera tienda asociada a un owner (el merchant logueado).
+ * En el demo cada merchant tiene una sola tienda. Si no hay match en
+ * Supabase, cae al primer mockStore para que el dashboard del comercio
+ * sea navegable también en modo demo/offline.
+ */
+export async function fetchStoreByOwner(ownerId) {
+  if (!ownerId) return mockStores[0] || null;
+  try {
+    const { data, error } = await supabase
+      .from('stores')
+      .select('*')
+      .eq('owner_id', ownerId)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return mapStoreRow(data);
+  } catch (error) {
+    console.warn('Supabase: fetchStoreByOwner falló, usando mockStores[0]:', error?.message || error);
+  }
+  return mockStores[0] || null;
+}
+
+/**
+ * Actualiza campos de la tienda (parcial). Recibe camelCase y mapea a
+ * snake_case. Solo el dueño puede ejecutar esto (RLS en la migración).
+ */
+export async function updateStore(storeId, patch) {
+  if (!storeId) throw new Error('storeService: storeId requerido');
+  const row = {};
+  if (patch.name !== undefined) row.name = patch.name;
+  if (patch.category !== undefined) row.category = patch.category;
+  if (patch.description !== undefined) row.description = patch.description;
+  if (patch.deliveryTime !== undefined) row.delivery_time = patch.deliveryTime;
+  if (patch.address !== undefined) row.address = patch.address;
+  if (patch.phone !== undefined) row.phone = patch.phone;
+  if (patch.isOpen !== undefined) row.is_open = patch.isOpen;
+  if (patch.openHours !== undefined) row.open_hours = patch.openHours;
+  if (patch.pagoMovil !== undefined) row.pago_movil = patch.pagoMovil;
+  if (patch.latitude !== undefined) row.latitude = Number(patch.latitude);
+  if (patch.longitude !== undefined) row.longitude = Number(patch.longitude);
+
+  const { data, error } = await supabase
+    .from('stores')
+    .update(row)
+    .eq('id', storeId)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapStoreRow(data);
+}
+
