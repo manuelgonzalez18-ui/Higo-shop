@@ -1,0 +1,61 @@
+name: Build Android APK
+
+# APK debug de preview. Compila la web (Vite), la sincroniza al proyecto
+# Capacitor y corre gradle assembleDebug en un runner de GitHub (que SI tiene
+# acceso al Android SDK / Maven de Google, a diferencia del entorno de Claude).
+# El APK queda como artifact descargable de la corrida.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/sharp-tesla-gv6A9
+
+jobs:
+  build-apk:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: Build web (Vite)
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyAoGygSCo5Uxoi7Dz3-cusemmz2CD8Lhko' }}
+        run: npm run build
+
+      - name: Capacitor sync (android)
+        run: npx cap sync android
+
+      - name: Build debug APK
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: higoshop-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30

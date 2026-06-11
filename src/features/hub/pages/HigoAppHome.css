@@ -1,0 +1,168 @@
+.higo-hub {
+  padding: var(--space-4, 16px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.higo-hub__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  padding-top: var(--space-2, 8px);
+}
+
+.higo-hub__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.higo-hub__logo {
+  font-size: 38px;
+  line-height: 1;
+}
+
+.higo-hub__brand h1 {
+  font-size: var(--font-2xl, 24px);
+  font-weight: 800;
+  margin: 0;
+  color: var(--higo-gray-900, #0f172a);
+}
+
+.higo-hub__brand p {
+  margin: 0;
+  font-size: var(--font-sm, 14px);
+  color: var(--higo-gray-500, #64748b);
+}
+
+.higo-hub__location {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-xs, 12px);
+  color: var(--higo-gray-500, #64748b);
+  max-width: 100%;
+}
+
+.higo-hub__location span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.higo-hub__active-order {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 14px;
+  background: var(--higo-blue-50, #eff6ff);
+  color: var(--higo-blue, #3b82f6);
+  cursor: pointer;
+  text-align: left;
+}
+
+.higo-hub__active-order-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.higo-hub__active-order-text strong {
+  font-size: var(--font-sm, 14px);
+  color: var(--higo-gray-900, #0f172a);
+}
+
+.higo-hub__active-order-text span {
+  font-size: var(--font-xs, 12px);
+  color: var(--higo-gray-500, #64748b);
+}
+
+.higo-hub__modules {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.higo-module-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 18px 16px;
+  border: 1px solid var(--higo-gray-200, #e2e8f0);
+  border-radius: 18px;
+  background: var(--higo-surface, #fff);
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  border-left: 4px solid var(--module-accent, #3b82f6);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.higo-module-card:not(.higo-module-card--soon):hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.higo-module-card--soon {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.higo-module-card__emoji {
+  font-size: 30px;
+  line-height: 1;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--module-accent, #3b82f6) 12%, transparent);
+}
+
+.higo-module-card__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.higo-module-card__name {
+  font-size: var(--font-md, 16px);
+  font-weight: 700;
+  color: var(--higo-gray-900, #0f172a);
+}
+
+.higo-module-card__tagline {
+  font-size: var(--font-xs, 12px);
+  color: var(--higo-gray-500, #64748b);
+}
+
+.higo-module-card__chevron {
+  color: var(--higo-gray-400, #94a3b8);
+}
+
+.higo-module-card__badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--higo-gray-500, #64748b);
+  background: var(--higo-gray-100, #f1f5f9);
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.higo-hub__footer {
+  text-align: center;
+  font-size: var(--font-xs, 12px);
+  color: var(--higo-gray-400, #94a3b8);
+  margin: var(--space-2, 8px) 0 0;
+}

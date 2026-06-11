@@ -1,0 +1,50 @@
+name: CI — Build check
+
+# Quality gate previo al merge: corre `npm ci && npm run build` en cada PR
+# que apunte a main. Es el primer escalón del checklist propuesto en
+# DEVOPS_OPERATIVE_ASSESSMENT.md (Fase 0). Se ampliará con lint/typecheck/
+# tests cuando se agreguen al proyecto.
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - 'supabase/migrations/**'
+  workflow_dispatch:
+
+# Cancelar corridas viejas del mismo PR cuando entran nuevos commits.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (Vite)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: Build (con fallbacks publicos para PRs sin secrets)
+        # El bundle de PR es solo para validar que compila — usa la key
+        # publica referrer-restricted de Google Maps y los fallbacks
+        # internos de Supabase. NO se publica este artifact.
+        env:
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyAoGygSCo5Uxoi7Dz3-cusemmz2CD8Lhko' }}
+        run: npm run build
+
+      - name: Verificar bundle producido
+        run: |
+          test -f dist/index.html || { echo "::error::dist/index.html no se genero"; exit 1; }
+          grep -q "Higo" dist/index.html || { echo "::error::index.html no contiene el title esperado"; exit 1; }
+          echo "Bundle OK"

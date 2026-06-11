@@ -484,3 +484,83 @@
   color: var(--higo-gray-400);
   cursor: not-allowed;
 }
+
+/* === Top tabs del dashboard completo (Pedidos / Productos / Mi Tienda / Ingresos) === */
+.merchant-toptabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 4px;
+  overflow-x: auto;
+  background: transparent;
+}
+.merchant-toptab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--higo-gray-200, #e2e8f0);
+  background: #fff;
+  color: var(--higo-gray-600, #475569);
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.merchant-toptab.active {
+  background: var(--higo-blue, #3b82f6);
+  color: #fff;
+  border-color: transparent;
+}
+
+.merchant-hero-header__open {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.merchant-hero-header__open.is-open { background: #ecfdf5; color: #047857; }
+.merchant-hero-header__open.is-closed { background: #fef3c7; color: #b45309; }
+
+/* === Modal verificación de pago === */
+.merchant-verify-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: grid; place-items: center;
+  z-index: 1000; padding: 16px;
+}
+.merchant-verify {
+  width: 100%;
+  max-width: 380px;
+  background: #fff;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.merchant-verify__header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.merchant-verify__header h3 { margin: 0; font-size: 16px; color: var(--higo-gray-900, #0f172a); }
+.merchant-verify__close {
+  width: 28px; height: 28px; border-radius: 8px;
+  border: 1px solid var(--higo-gray-200, #e2e8f0);
+  background: #fff;
+  display: grid; place-items: center; cursor: pointer; color: var(--higo-gray-500, #64748b);
+}
+.merchant-verify__sub { margin: 0; font-size: 13px; color: var(--higo-gray-500, #64748b); }
+.merchant-verify label {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 12px; font-weight: 600; color: var(--higo-gray-500, #64748b);
+}
+.merchant-verify label input {
+  border: 1px solid var(--higo-gray-200, #e2e8f0);
+  border-radius: 10px; padding: 10px 12px;
+  font-size: 15px; color: var(--higo-gray-900, #0f172a);
+  letter-spacing: 0.02em;
+}
+.merchant-verify__actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+}

@@ -2,17 +2,22 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Store, ClipboardList, CheckCircle2, AlertCircle, Clock,
-  MessageCircle, Send, Check, Search, Filter, ShieldCheck
+  MessageCircle, Send, Check, Search, Filter, ShieldCheck,
+  Package, Settings, BarChart3, X
 } from 'lucide-react';
 import { useOrderStore } from '../../../stores/useOrderStore.js';
 import { useAuthStore } from '../../../stores/useAuthStore.js';
 import { syncOrderStatus } from '../../../services/orderRealtimeService.js';
-import { fetchStoreOrdersRemote } from '../../../services/orderService.js';
+import { fetchStoreOrdersRemote, setOrderPaymentReference } from '../../../services/orderService.js';
+import { fetchStoreByOwner } from '../../../services/storeService.js';
 import { pushOrderEvent } from '../../../services/trackingService.js';
 import { formatOrderStatus } from '../../../services/orderStatus.js';
 import { useChatStore } from '../../../stores/useChatStore.js';
 import { formatCurrency } from '../../../services/deliveryPricing.js';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
+import { MerchantProducts } from './MerchantProducts.jsx';
+import { MerchantStoreSettings } from './MerchantStoreSettings.jsx';
+import { MerchantEarnings } from './MerchantEarnings.jsx';
 import './MerchantDashboard.css';
 
 const reportRealtimeError = (action, error) => {
@@ -26,24 +31,38 @@ const STATUS_SECTIONS = [
   { id: 'delivered', label: 'Historial', icon: '🏁', statuses: ['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE_TO_STORE', 'PICKED_UP', 'DRIVER_EN_ROUTE_TO_CUSTOMER', 'DELIVERY_PAYMENT_PENDING', 'DELIVERY_PAYMENT_REPORTED', 'DELIVERY_PAYMENT_CONFIRMED', 'DELIVERED', 'CANCELLED'] }
 ];
 
-export function MerchantDashboard() {
+const TOP_TABS = [
+  { id: 'orders', label: 'Pedidos', icon: ClipboardList },
+  { id: 'products', label: 'Productos', icon: Package },
+  { id: 'store', label: 'Mi Tienda', icon: Settings },
+  { id: 'earnings', label: 'Ingresos', icon: BarChart3 },
+];
+
+// === Flujo de pedidos (lo que ya existía como MerchantDashboard) ===
+// Lo encapsulo como sub-componente para poder envolverlo en el shell
+// del dashboard completo sin tocar su lógica.
+function MerchantOrdersTab({ store }) {
   const { orders, updateOrderStatus, assignDriver, upsertRemoteOrder } = useOrderStore();
   const merchantId = useAuthStore((s) => s.userId);
   const { chats, addMessage, initializeChat } = useChatStore();
-  
-  const [activeTab, setActiveTab] = useState('pending'); // pending | kitchen | dispatch | delivered
+
+  const [activeTab, setActiveTab] = useState('pending');
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [chatInputText, setChatInputText] = useState('');
+  // Modal de captura de referencia de Pago Móvil para verificar el pago
+  // de productos. Cuando hay valor != null mostramos el sheet.
+  const [refOrder, setRefOrder] = useState(null);
+  const [refValue, setRefValue] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
-    const fallbackStoreId = orders[0]?.storeId;
+    const fallbackStoreId = store?.id || orders[0]?.storeId;
     if (!fallbackStoreId) return;
     fetchStoreOrdersRemote(fallbackStoreId)
       .then((rows) => rows.forEach((o) => upsertRemoteOrder(o)))
-      .catch((error) => reportRealtimeError("realtime action failed", error));
-  }, [orders, upsertRemoteOrder]);
+      .catch((error) => reportRealtimeError('realtime action failed', error));
+  }, [store?.id, orders, upsertRemoteOrder]);
 
-  // Auto-select first order if exists
   const activeOrdersForTab = useMemo(() => {
     const section = STATUS_SECTIONS.find(s => s.id === activeTab);
     return orders.filter(o => section.statuses.includes(o.status));
@@ -53,7 +72,6 @@ export function MerchantDashboard() {
     return orders.find(o => o.id === selectedOrderId) || activeOrdersForTab[0] || null;
   }, [orders, selectedOrderId, activeOrdersForTab]);
 
-  // Sync selectedOrderId when changing tabs
   useEffect(() => {
     if (activeOrdersForTab.length > 0) {
       setSelectedOrderId(activeOrdersForTab[0].id);
@@ -68,71 +86,81 @@ export function MerchantDashboard() {
     return chats[selectedOrder.id] || { storeMessages: [] };
   }, [selectedOrder, chats]);
 
-  // Handles chat message submission
   const handleSendMerchantMessage = (e) => {
     e.preventDefault();
     if (!chatInputText.trim() || !selectedOrder) return;
-
-    addMessage(selectedOrder.id, 'storeMessages', {
-      sender: 'store',
-      text: chatInputText
-    });
+    addMessage(selectedOrder.id, 'storeMessages', { sender: 'store', text: chatInputText });
     setChatInputText('');
   };
 
-  // Simulates Driver assignment upon dispatch
   const handleDispatchOrder = (orderId) => {
     updateOrderStatus(orderId, 'READY_FOR_DRIVER_MATCH');
-    syncOrderStatus(orderId, 'READY_FOR_DRIVER_MATCH').catch((error) => reportRealtimeError("realtime action failed", error));
-    pushOrderEvent({ orderId, eventType: 'ORDER_READY_FOR_DRIVER_MATCH', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
-    
-    addMessage(orderId, 'storeMessages', {
-      sender: 'store',
-      text: '📦 Pedido empacado y listo. Buscando motorizado en la zona...'
-    });
+    syncOrderStatus(orderId, 'READY_FOR_DRIVER_MATCH').catch((error) => reportRealtimeError('realtime action failed', error));
+    pushOrderEvent({ orderId, eventType: 'ORDER_READY_FOR_DRIVER_MATCH', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError('realtime action failed', error));
 
-    // Simulate driver matching in 4 seconds
+    addMessage(orderId, 'storeMessages', { sender: 'store', text: '📦 Pedido empacado y listo. Buscando motorizado en la zona...' });
+
     setTimeout(() => {
       updateOrderStatus(orderId, 'DRIVER_CANDIDATE_BROADCASTED');
-      syncOrderStatus(orderId, 'DRIVER_CANDIDATE_BROADCASTED').catch((error) => reportRealtimeError("realtime action failed", error));
-      pushOrderEvent({ orderId, eventType: 'DRIVER_CANDIDATE_BROADCASTED', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error));
+      syncOrderStatus(orderId, 'DRIVER_CANDIDATE_BROADCASTED').catch((error) => reportRealtimeError('realtime action failed', error));
+      pushOrderEvent({ orderId, eventType: 'DRIVER_CANDIDATE_BROADCASTED', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError('realtime action failed', error));
 
       assignDriver(orderId, merchantId);
-      syncOrderStatus(orderId, 'DRIVER_ASSIGNED', merchantId).catch((error) => reportRealtimeError("realtime action failed", error));
-      pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'system', actorId: merchantId, payload: { city: 'Higuerote', source: 'merchant_auto_assign' } }).catch((error) => reportRealtimeError("realtime action failed", error));
-      
-      addMessage(orderId, 'driverMessages', {
-        sender: 'driver',
-        text: '🛵 Higo Driver asignado al despacho.',
-        system: true
-      });
+      syncOrderStatus(orderId, 'DRIVER_ASSIGNED', merchantId).catch((error) => reportRealtimeError('realtime action failed', error));
+      pushOrderEvent({ orderId, eventType: 'DRIVER_ASSIGNED', actorType: 'system', actorId: merchantId, payload: { city: 'Higuerote', source: 'merchant_auto_assign' } }).catch((error) => reportRealtimeError('realtime action failed', error));
 
-      addMessage(orderId, 'driverMessages', {
-        sender: 'driver',
-        text: '¡Buenas noches! Soy tu Higo Driver. Ya voy saliendo a retirar el pedido.'
-      });
-
-      addMessage(orderId, 'storeMessages', {
-        sender: 'store',
-        text: '🛵 Un Higo Driver ha sido asignado y va en camino a retirar.'
-      });
+      addMessage(orderId, 'driverMessages', { sender: 'driver', text: '🛵 Higo Driver asignado al despacho.', system: true });
+      addMessage(orderId, 'driverMessages', { sender: 'driver', text: '¡Buenas noches! Soy tu Higo Driver. Ya voy saliendo a retirar el pedido.' });
+      addMessage(orderId, 'storeMessages', { sender: 'store', text: '🛵 Un Higo Driver ha sido asignado y va en camino a retirar.' });
     }, 4000);
   };
 
-  return (
-    <div className="merchant-dashboard animate-fade-in">
-      {/* 1. TOP HEADER BANNER */}
-      <div className="merchant-hero-header">
-        <div className="merchant-hero-header__logo">
-          <Store size={22} />
-        </div>
-        <div>
-          <h1>Panel de Control de Comercio</h1>
-          <span className="merchant-hero-header__store">Comercio Activo: <strong>Arepera La Reina</strong></span>
-        </div>
-      </div>
+  // En vez de confirmar el pago directo, abrimos el modal de captura
+  // de referencia. Persistimos la referencia ANTES de transicionar el
+  // status — así el evento PRODUCT_PAYMENT_VERIFIED ya queda asociado
+  // a una orden con su referencia guardada en DB.
+  const openVerifyPayment = (order) => {
+    setRefOrder(order);
+    setRefValue(order.productPaymentReference || '');
+  };
 
-      {/* 2. DYNAMIC WORKFLOW TABS */}
+  const closeVerifyPayment = () => {
+    if (isVerifying) return;
+    setRefOrder(null);
+    setRefValue('');
+  };
+
+  const confirmVerifyPayment = async () => {
+    if (!refOrder || !refValue.trim()) return;
+    setIsVerifying(true);
+    const orderId = refOrder.id;
+    const reference = refValue.trim();
+    try {
+      // 1) guardar la referencia (mejor esfuerzo; si la DB no la persiste
+      // por RLS/offline el flujo igual avanza con el estado local).
+      await setOrderPaymentReference(orderId, 'product', reference).catch((error) =>
+        reportRealtimeError('setOrderPaymentReference', error),
+      );
+      // 2) mover el estado y emitir el evento (con la ref en el payload).
+      updateOrderStatus(orderId, 'PRODUCT_PAYMENT_VERIFIED');
+      await syncOrderStatus(orderId, 'PRODUCT_PAYMENT_VERIFIED').catch((error) =>
+        reportRealtimeError('syncOrderStatus', error),
+      );
+      await pushOrderEvent({
+        orderId,
+        eventType: 'PRODUCT_PAYMENT_VERIFIED',
+        actorType: 'merchant',
+        actorId: merchantId || 'merchant-demo',
+        payload: { city: 'Higuerote', reference },
+      }).catch((error) => reportRealtimeError('pushOrderEvent', error));
+      closeVerifyPayment();
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  return (
+    <>
       <div className="merchant-workflow-tabs">
         {STATUS_SECTIONS.map(sec => {
           const count = orders.filter(o => sec.statuses.includes(o.status)).length;
@@ -150,9 +178,7 @@ export function MerchantDashboard() {
         })}
       </div>
 
-      {/* 3. DUAL-PANEL LAYOUT */}
       <div className="merchant-layout-split">
-        {/* Left List Pane */}
         <div className="merchant-orders-pane">
           {activeOrdersForTab.length === 0 ? (
             <div className="merchant-empty-pane">
@@ -188,11 +214,9 @@ export function MerchantDashboard() {
           )}
         </div>
 
-        {/* Right Details Panel */}
         <div className="merchant-details-pane">
           {selectedOrder ? (
             <div className="merchant-details-content">
-              {/* Order Info */}
               <div className="details-header">
                 <div>
                   <h3>Orden {selectedOrder.id}</h3>
@@ -201,7 +225,6 @@ export function MerchantDashboard() {
                 <div className="details-price">{formatCurrency(selectedOrder.productTotal)}</div>
               </div>
 
-              {/* Status Action Block */}
               <div className="details-action-block">
                 <div className="details-action-block__status">
                   <span>Estado:</span>
@@ -212,7 +235,7 @@ export function MerchantDashboard() {
                   {(selectedOrder.status === 'PENDING_PAYMENT' || selectedOrder.status === 'PENDING_PRODUCT_PAYMENT' || selectedOrder.status === 'PRODUCT_PAYMENT_REPORTED') && (
                     <button
                       className="action-btn action-btn--success"
-                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PRODUCT_PAYMENT_VERIFIED'); syncOrderStatus(selectedOrder.id, 'PRODUCT_PAYMENT_VERIFIED').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PRODUCT_PAYMENT_VERIFIED', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
+                      onClick={() => openVerifyPayment(selectedOrder)}
                     >
                       <CheckCircle2 size={16} />
                       Confirmar Pago Recibido
@@ -222,7 +245,7 @@ export function MerchantDashboard() {
                   {(selectedOrder.status === 'PAYMENT_VERIFIED' || selectedOrder.status === 'PRODUCT_PAYMENT_VERIFIED') && (
                     <button
                       className="action-btn action-btn--primary"
-                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PREPARING'); syncOrderStatus(selectedOrder.id, 'PREPARING').catch((error) => reportRealtimeError("realtime action failed", error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PREPARING', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError("realtime action failed", error)); }}
+                      onClick={() => { updateOrderStatus(selectedOrder.id, 'PREPARING'); syncOrderStatus(selectedOrder.id, 'PREPARING').catch((error) => reportRealtimeError('realtime action failed', error)); pushOrderEvent({ orderId: selectedOrder.id, eventType: 'PREPARING', actorType: 'merchant', actorId: merchantId || 'merchant-demo', payload: { city: 'Higuerote' } }).catch((error) => reportRealtimeError('realtime action failed', error)); }}
                     >
                       👨‍🍳 Iniciar Preparación
                     </button>
@@ -267,7 +290,6 @@ export function MerchantDashboard() {
                 </div>
               </div>
 
-              {/* Items List */}
               <div className="details-items-section">
                 <h4>Productos Solicitados</h4>
                 <div className="details-items-list">
@@ -280,7 +302,6 @@ export function MerchantDashboard() {
                 </div>
               </div>
 
-              {/* Live Chat with Customer */}
               <div className="details-chat-section">
                 <h4>Chat con el Cliente</h4>
                 <div className="details-chat-box">
@@ -327,6 +348,118 @@ export function MerchantDashboard() {
           )}
         </div>
       </div>
+
+      {/* Modal de captura de referencia de Pago Móvil */}
+      <AnimatePresence>
+        {refOrder && (
+          <motion.div
+            className="merchant-verify-backdrop"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={closeVerifyPayment}
+          >
+            <motion.div
+              className="merchant-verify"
+              initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="merchant-verify__header">
+                <h3>Verificar pago de productos</h3>
+                <button onClick={closeVerifyPayment} disabled={isVerifying} className="merchant-verify__close">
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="merchant-verify__sub">
+                Ingresá el número de referencia de Pago Móvil que recibiste del cliente.
+                Se guarda en el pedido para auditoría.
+              </p>
+              <label>
+                Referencia
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoFocus
+                  value={refValue}
+                  onChange={(e) => setRefValue(e.target.value)}
+                  placeholder="Ej: 0123456789"
+                />
+              </label>
+              <div className="merchant-verify__actions">
+                <button className="btn-ghost" onClick={closeVerifyPayment} disabled={isVerifying}>Cancelar</button>
+                <button
+                  className="btn-primary"
+                  onClick={confirmVerifyPayment}
+                  disabled={isVerifying || !refValue.trim()}
+                >
+                  {isVerifying ? 'Verificando...' : 'Confirmar pago'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+// === Wrapper del dashboard completo con pestañas top-level ===
+export function MerchantDashboard() {
+  const merchantId = useAuthStore((s) => s.userId);
+  const [topTab, setTopTab] = useState('orders');
+  const [store, setStore] = useState(null);
+  const [isLoadingStore, setIsLoadingStore] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchStoreByOwner(merchantId)
+      .then((data) => { if (mounted) setStore(data); })
+      .catch((error) => reportRealtimeError('fetchStoreByOwner', error))
+      .finally(() => { if (mounted) setIsLoadingStore(false); });
+    return () => { mounted = false; };
+  }, [merchantId]);
+
+  return (
+    <div className="merchant-dashboard animate-fade-in">
+      <div className="merchant-hero-header">
+        <div className="merchant-hero-header__logo">
+          <Store size={22} />
+        </div>
+        <div>
+          <h1>Panel de Control de Comercio</h1>
+          <span className="merchant-hero-header__store">
+            Comercio Activo: <strong>{store?.name || 'Cargando...'}</strong>
+            {store && (
+              <span className={`merchant-hero-header__open ${store.isOpen ? 'is-open' : 'is-closed'}`}>
+                {store.isOpen ? 'Abierto' : 'Cerrado'}
+              </span>
+            )}
+          </span>
+        </div>
+      </div>
+
+      <nav className="merchant-toptabs">
+        {TOP_TABS.map((t) => {
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.id}
+              className={`merchant-toptab ${topTab === t.id ? 'active' : ''}`}
+              onClick={() => setTopTab(t.id)}
+            >
+              <Icon size={16} />
+              <span>{t.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {topTab === 'orders' && <MerchantOrdersTab store={store} />}
+      {topTab === 'products' && <MerchantProducts store={store} />}
+      {topTab === 'store' && (
+        isLoadingStore
+          ? <div className="merchant-loading"><Spinner size="md" /></div>
+          : <MerchantStoreSettings store={store} onUpdated={setStore} />
+      )}
+      {topTab === 'earnings' && <MerchantEarnings store={store} />}
     </div>
   );
 }
