@@ -12,7 +12,13 @@ export const useOrderStore = create(
       createOrder: (orderData) => {
         const order = {
           id: `order-${nanoid(8)}`,
-          status: ORDER_STATUSES.PENDING_PAYMENT,
+          // Default v2: arranca en el flujo granular de pago dividido
+          // y queda etiquetado como módulo Shop. Si el caller pasa su
+          // propio status/orderType/sub-estados, gana el del caller.
+          status: ORDER_STATUSES.PENDING_PRODUCT_PAYMENT,
+          orderType: 'shop',
+          productPaymentStatus: ORDER_STATUSES.PENDING_PRODUCT_PAYMENT,
+          deliveryPaymentStatus: ORDER_STATUSES.DELIVERY_PAYMENT_PENDING,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           driverId: null,

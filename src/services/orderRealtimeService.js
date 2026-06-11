@@ -7,6 +7,26 @@ function assertValidOrderId(orderId) {
   }
 }
 
+// Cuando el status principal cruza un hito del pago dividido, también
+// movemos el sub-estado para que quede coherente en DB sin que cada
+// llamador tenga que saber del mapeo. Es un superset — si el status no
+// es de pago, no se incluye nada y los sub-estados se respetan.
+function paymentSubStatePatch(status) {
+  switch (status) {
+    case 'PRODUCT_PAYMENT_REPORTED':
+      return { product_payment_status: 'PRODUCT_PAYMENT_REPORTED' };
+    case 'PRODUCT_PAYMENT_VERIFIED':
+    case 'PAYMENT_VERIFIED': // legacy alias
+      return { product_payment_status: 'PRODUCT_PAYMENT_VERIFIED' };
+    case 'DELIVERY_PAYMENT_REPORTED':
+      return { delivery_payment_status: 'DELIVERY_PAYMENT_REPORTED' };
+    case 'DELIVERY_PAYMENT_CONFIRMED':
+      return { delivery_payment_status: 'DELIVERY_PAYMENT_CONFIRMED' };
+    default:
+      return null;
+  }
+}
+
 export async function syncOrderStatus(orderId, status, driverId = null) {
   assertValidOrderId(orderId);
   assertValidOrderStatus(status);
@@ -14,6 +34,7 @@ export async function syncOrderStatus(orderId, status, driverId = null) {
   const patch = {
     status,
     updated_at: new Date().toISOString(),
+    ...(paymentSubStatePatch(status) || {}),
   };
 
   if (driverId) patch.driver_id = driverId;
