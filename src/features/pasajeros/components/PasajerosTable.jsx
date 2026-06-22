@@ -17,6 +17,8 @@ export function PasajerosTable({ pasajeros, capacidadUnidad }) {
   }
 
   const unidades = groupByUnidad(pasajeros);
+  const totalReservado = pasajeros.reduce((sum, p) => sum + Number(p.monto_reservado), 0);
+  const totalPendiente = pasajeros.reduce((sum, p) => sum + Number(p.monto_pendiente), 0);
 
   return (
     <div className="pasajeros-table">
@@ -71,6 +73,10 @@ export function PasajerosTable({ pasajeros, capacidadUnidad }) {
           </div>
         );
       })}
+
+      <p className="pasajeros-table__total">
+        Total de todos los clientes — Reservado: {formatCurrency(totalReservado)} · Por cancelar: {formatCurrency(totalPendiente)}
+      </p>
     </div>
   );
 }
