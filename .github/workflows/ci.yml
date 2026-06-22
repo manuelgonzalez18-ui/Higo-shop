@@ -35,16 +35,13 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
-      - name: Build (con fallbacks publicos para PRs sin secrets)
-        # El bundle de PR es solo para validar que compila — usa la key
-        # publica referrer-restricted de Google Maps y los fallbacks
-        # internos de Supabase. NO se publica este artifact.
-        env:
-          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyAoGygSCo5Uxoi7Dz3-cusemmz2CD8Lhko' }}
+      - name: Build (con fallback publico de Supabase para PRs sin secrets)
+        # El bundle de PR es solo para validar que compila — usa el
+        # fallback interno de Supabase. NO se publica este artifact.
         run: npm run build
 
       - name: Verificar bundle producido
         run: |
           test -f dist/index.html || { echo "::error::dist/index.html no se genero"; exit 1; }
-          grep -q "Higo" dist/index.html || { echo "::error::index.html no contiene el title esperado"; exit 1; }
+          grep -q "Agencia de Viajes" dist/index.html || { echo "::error::index.html no contiene el title esperado"; exit 1; }
           echo "Bundle OK"
