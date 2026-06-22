@@ -1,6 +1,9 @@
 -- Esquema de la agencia de viajes: viajes (destino + fecha) y pasajeros
--- registrados en cada viaje. No hay autenticación de usuarios (acceso libre
--- vía anon key), por lo que las tablas se dejan sin RLS a propósito.
+-- registrados en cada viaje. No hay autenticación de usuarios: el acceso es
+-- libre vía anon key. Como Supabase activa RLS por defecto en proyectos
+-- nuevos, al final del archivo se crean políticas permisivas que habilitan
+-- el acceso público total (de lo contrario los insert fallan con
+-- "new row violates row-level security policy").
 
 create table if not exists viajes (
   id uuid primary key default gen_random_uuid(),
@@ -76,3 +79,21 @@ begin
   return v_row;
 end;
 $$ language plpgsql;
+
+-- Acceso público: la app no tiene login y opera con la anon key, así que se
+-- habilitan políticas permisivas para todas las operaciones. La anon key ya
+-- es pública (va embebida en el bundle), por lo que esto no expone nada que
+-- no estuviera ya disponible por diseño.
+alter table viajes enable row level security;
+alter table pasajeros enable row level security;
+
+drop policy if exists "acceso publico viajes" on viajes;
+drop policy if exists "acceso publico pasajeros" on pasajeros;
+
+create policy "acceso publico viajes" on viajes
+  for all to anon, authenticated
+  using (true) with check (true);
+
+create policy "acceso publico pasajeros" on pasajeros
+  for all to anon, authenticated
+  using (true) with check (true);

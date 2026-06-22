@@ -4,7 +4,12 @@ import { Input } from '../../../components/ui/Input.jsx';
 import { Button } from '../../../components/ui/Button.jsx';
 import { DESTINOS } from '../../../data/destinos.js';
 
-const initialState = { destinoId: DESTINOS[0].id, fecha: '', precioPasajero: '' };
+const initialState = {
+  destinoId: DESTINOS[0].id,
+  fecha: '',
+  precioPasajero: '',
+  precioPasajeroComida: '',
+};
 
 export function NuevoViajeModal({ isOpen, onClose, onCreate, creating }) {
   const [form, setForm] = useState(initialState);
@@ -19,6 +24,7 @@ export function NuevoViajeModal({ isOpen, onClose, onCreate, creating }) {
       destinoNombre: destino.nombre,
       fecha: form.fecha,
       precioPasajero: Number(form.precioPasajero) || 0,
+      precioPasajeroComida: Number(form.precioPasajeroComida) || 0,
       capacidadUnidad: destino.capacidadUnidad,
     });
     setForm(initialState);
@@ -41,7 +47,8 @@ export function NuevoViajeModal({ isOpen, onClose, onCreate, creating }) {
         </label>
 
         <Input label="Fecha del viaje" type="date" value={form.fecha} onChange={setField('fecha')} required />
-        <Input label="Precio por pasajero ($)" type="number" min="0" step="0.01" value={form.precioPasajero} onChange={setField('precioPasajero')} required />
+        <Input label="Precio solo traslado ($)" type="number" min="0" step="0.01" value={form.precioPasajero} onChange={setField('precioPasajero')} required />
+        <Input label="Precio con comida ($)" type="number" min="0" step="0.01" value={form.precioPasajeroComida} onChange={setField('precioPasajeroComida')} required />
 
         <Button type="submit" fullWidth loading={creating}>Crear viaje</Button>
       </form>

@@ -80,7 +80,11 @@ export function ViajeDetallePage() {
 
       <Card className="viaje-detalle__header">
         <h1>{viaje.destino_nombre}</h1>
-        <p>{formatDate(viaje.fecha)} · Capacidad por unidad: {viaje.capacidad_unidad} · Precio: {formatCurrency(viaje.precio_pasajero)}</p>
+        <p>
+          {formatDate(viaje.fecha)} · Capacidad por unidad: {viaje.capacidad_unidad} ·{' '}
+          Solo traslado: {formatCurrency(viaje.precio_pasajero)} ·{' '}
+          Con comida: {formatCurrency(viaje.precio_pasajero_comida)}
+        </p>
         <p>
           {pasajeros.length} pasajeros · Reservado: {formatCurrency(totalReservado)} · Pendiente: {formatCurrency(totalPendiente)}
         </p>

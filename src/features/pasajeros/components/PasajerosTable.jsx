@@ -48,6 +48,8 @@ export function PasajerosTable({ pasajeros, capacidadUnidad }) {
                     <th>Reservado</th>
                     <th>Pendiente</th>
                     <th>Comida</th>
+                    <th>Desayuno</th>
+                    <th>Almuerzo</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -61,6 +63,8 @@ export function PasajerosTable({ pasajeros, capacidadUnidad }) {
                       <td>{formatCurrency(p.monto_reservado)}</td>
                       <td>{formatCurrency(p.monto_pendiente)}</td>
                       <td>{p.servicio_comida ? 'Sí' : 'No'}</td>
+                      <td>{p.servicio_comida ? p.desayuno_solicitado : '—'}</td>
+                      <td>{p.servicio_comida ? p.almuerzo_solicitado : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
