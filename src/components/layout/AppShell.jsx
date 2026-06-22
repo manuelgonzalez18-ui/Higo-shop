@@ -1,32 +1,20 @@
-import { Outlet } from 'react-router-dom';
-import { BottomNav } from './BottomNav.jsx';
-import { useAuthStore } from '../../stores/useAuthStore.js';
+import { Link, Outlet } from 'react-router-dom';
+import { Bus } from 'lucide-react';
 import './AppShell.css';
 
 export function AppShell() {
-  const { role, setRole } = useAuthStore();
-
   return (
-    <div className="higo-app-shell">
-      {/* Dev-only role switcher */}
-      <div className="role-switcher">
-        {['customer', 'merchant', 'driver'].map((r) => (
-          <button
-            key={r}
-            className={role === r ? 'active' : ''}
-            onClick={() => setRole(r)}
-          >
-            {r === 'customer' ? '👤' : r === 'merchant' ? '🏪' : '🛵'}{' '}
-            {r === 'customer' ? 'Cliente' : r === 'merchant' ? 'Comercio' : 'Driver'}
-          </button>
-        ))}
-      </div>
+    <div className="app-shell">
+      <header className="app-shell__header">
+        <Link to="/" className="app-shell__brand">
+          <Bus size={20} />
+          <span>Agencia de Viajes</span>
+        </Link>
+      </header>
 
-      <div className="higo-app-shell__content">
+      <div className="app-shell__content">
         <Outlet />
       </div>
-
-      <BottomNav />
     </div>
   );
 }

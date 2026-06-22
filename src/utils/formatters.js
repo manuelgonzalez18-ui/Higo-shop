@@ -1,11 +1,11 @@
 /**
- * Format a number as Venezuelan Bolívares.
+ * Format a number as US dollars.
  * @param {number} amount
- * @returns {string} e.g. 'Bs. 12.50'
+ * @returns {string} e.g. '$ 12.50'
  */
 export function formatCurrency(amount) {
-  if (amount == null || isNaN(amount)) return 'Bs. 0.00';
-  return `Bs. ${Number(amount).toFixed(2)}`;
+  if (amount == null || isNaN(amount)) return '$ 0.00';
+  return `$ ${Number(amount).toFixed(2)}`;
 }
 
 /**
@@ -14,6 +14,17 @@ export function formatCurrency(amount) {
  * @returns {string} e.g. '21/05/2026'
  */
 export function formatDate(date) {
+  // Postgres 'date' columns come back as plain 'YYYY-MM-DD' strings. Parsing
+  // those with `new Date()` treats them as UTC midnight, which shifts to the
+  // previous day once formatted in a negative UTC-offset timezone. Parse the
+  // parts directly to keep the calendar date the user actually picked.
+  if (typeof date === 'string') {
+    const match = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      const [, year, month, day] = match;
+      return `${day}/${month}/${year}`;
+    }
+  }
   const d = date instanceof Date ? date : new Date(date);
   if (isNaN(d.getTime())) return '';
   const day = String(d.getDate()).padStart(2, '0');

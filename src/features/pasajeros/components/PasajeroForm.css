@@ -1,0 +1,25 @@
+.pasajero-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pasajero-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+}
+
+.pasajero-form__checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--higo-gray-700);
+}
+
+.pasajero-form__checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--higo-blue);
+}

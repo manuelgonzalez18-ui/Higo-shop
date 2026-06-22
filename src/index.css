@@ -1,5 +1,5 @@
 /* ============================================
-   HIGO SHOP — Design System
+   Agencia de Viajes — Design System
    ============================================ */
 
 /* --- CSS Custom Properties --- */
@@ -107,9 +107,8 @@
   --z-toast: 500;
 
   /* Layout */
-  --app-max-width: 480px;
+  --app-max-width: 1080px;
   --header-height: 56px;
-  --bottom-nav-height: 64px;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -336,40 +335,3 @@ ul, ol {
   box-shadow: 0 0 60px rgba(0, 0, 0, 0.06);
 }
 
-/* --- Google Maps Marker Animation --- */
-@keyframes higo-marker-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-@keyframes higo-map-shimmer {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
-/* Google Places Autocomplete dropdown — match dark theme */
-.pac-container {
-  background: var(--higo-white);
-  border: 1px solid var(--higo-gray-300);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  font-family: var(--font-family);
-  margin-top: 4px;
-  z-index: 9999;
-}
-.pac-item {
-  padding: 10px 12px;
-  border-top: 1px solid var(--higo-gray-200);
-  color: var(--higo-gray-700);
-  cursor: pointer;
-}
-.pac-item:first-child { border-top: none; }
-.pac-item:hover, .pac-item-selected {
-  background: var(--higo-gray-100);
-}
-.pac-item-query {
-  color: var(--higo-gray-900);
-  font-weight: 600;
-}
-.pac-matched { color: var(--higo-blue-light); }
-.pac-icon { filter: invert(85%); }
