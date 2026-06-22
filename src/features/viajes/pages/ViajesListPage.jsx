@@ -65,7 +65,10 @@ export function ViajesListPage() {
             <Card key={v.id} hoverable onClick={() => navigate(`/viajes/${v.id}`)}>
               <h2>{v.destino_nombre}</h2>
               <p>{formatDate(v.fecha)}</p>
-              <p>{v.total_pasajeros} pasajeros · {formatCurrency(v.precio_pasajero)} / pasajero</p>
+              <p>
+                {v.total_pasajeros} pasajeros · Traslado: {formatCurrency(v.precio_pasajero)} ·
+                Comida: {formatCurrency(v.precio_pasajero_comida)}
+              </p>
             </Card>
           ))}
         </div>

@@ -20,7 +20,9 @@ export async function obtenerViaje(viajeId) {
   return data;
 }
 
-export async function crearViaje({ destinoId, destinoNombre, fecha, precioPasajero, capacidadUnidad }) {
+export async function crearViaje({
+  destinoId, destinoNombre, fecha, precioPasajero, precioPasajeroComida, capacidadUnidad,
+}) {
   const { data, error } = await supabase
     .from('viajes')
     .insert({
@@ -28,6 +30,7 @@ export async function crearViaje({ destinoId, destinoNombre, fecha, precioPasaje
       destino_nombre: destinoNombre,
       fecha,
       precio_pasajero: precioPasajero,
+      precio_pasajero_comida: precioPasajeroComida,
       capacidad_unidad: capacidadUnidad,
     })
     .select()

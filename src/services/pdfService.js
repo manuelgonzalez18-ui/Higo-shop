@@ -7,6 +7,8 @@ const COLUMNS = [
   'Reservado', 'Pendiente', 'Comida',
 ];
 
+const COLUMNS_COMIDA = ['Unidad', 'Grupo', 'Nombre', 'Apellido', 'Desayuno', 'Almuerzo'];
+
 function buildRows(pasajeros) {
   return pasajeros.map((p) => [
     p.unidad_numero,
@@ -19,6 +21,19 @@ function buildRows(pasajeros) {
     formatCurrency(p.monto_pendiente),
     p.servicio_comida ? 'Sí' : 'No',
   ]);
+}
+
+function buildRowsComida(pasajeros) {
+  return pasajeros
+    .filter((p) => p.servicio_comida)
+    .map((p) => [
+      p.unidad_numero,
+      p.grupo_numero,
+      p.nombre,
+      p.apellido,
+      p.desayuno_solicitado || '—',
+      p.almuerzo_solicitado || '—',
+    ]);
 }
 
 export function generarPdfViaje(viaje, pasajeros) {
@@ -55,6 +70,25 @@ export function generarPdfViaje(viaje, pasajeros) {
     `Con servicio de comida: ${totalComida}`,
     14, finalY,
   );
+
+  if (totalComida > 0) {
+    doc.addPage();
+    doc.setFontSize(16);
+    doc.text(`Menú — ${viaje.destino_nombre}`, 14, 16);
+    doc.setFontSize(10);
+    doc.text(
+      `Fecha: ${formatDate(viaje.fecha)}   |   Pasajeros con servicio de comida: ${totalComida}`,
+      14, 23,
+    );
+
+    autoTable(doc, {
+      startY: 28,
+      head: [COLUMNS_COMIDA],
+      body: buildRowsComida(pasajeros),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [37, 99, 235] },
+    });
+  }
 
   doc.save(`viaje-${viaje.destino_id}-${viaje.fecha}.pdf`);
 }

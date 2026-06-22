@@ -11,6 +11,8 @@ const initialState = {
   grupoNumero: '',
   montoReservado: '',
   servicioComida: false,
+  desayunoSolicitado: '',
+  almuerzoSolicitado: '',
 };
 
 export function PasajeroForm({ onSubmit, submitting }) {
@@ -31,6 +33,8 @@ export function PasajeroForm({ onSubmit, submitting }) {
       grupoNumero: Number(form.grupoNumero),
       montoReservado: Number(form.montoReservado) || 0,
       servicioComida: form.servicioComida,
+      desayunoSolicitado: form.servicioComida ? form.desayunoSolicitado.trim() : '',
+      almuerzoSolicitado: form.servicioComida ? form.almuerzoSolicitado.trim() : '',
     });
     setForm(initialState);
   };
@@ -50,6 +54,13 @@ export function PasajeroForm({ onSubmit, submitting }) {
         <input type="checkbox" checked={form.servicioComida} onChange={setField('servicioComida')} />
         Solicitó servicio de comida
       </label>
+
+      {form.servicioComida && (
+        <div className="pasajero-form__grid">
+          <Input label="Desayuno solicitado" value={form.desayunoSolicitado} onChange={setField('desayunoSolicitado')} required />
+          <Input label="Almuerzo solicitado" value={form.almuerzoSolicitado} onChange={setField('almuerzoSolicitado')} required />
+        </div>
+      )}
 
       <Button type="submit" fullWidth loading={submitting}>
         Registrar pasajero
