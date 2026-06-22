@@ -1,0 +1,57 @@
+.pasajeros-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.pasajeros-table__empty {
+  color: var(--higo-gray-500);
+  font-size: var(--font-sm);
+}
+
+.pasajeros-table__unidad {
+  border: 1px solid var(--higo-gray-200);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.pasajeros-table__unidad-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.pasajeros-table__unidad-header h3 {
+  font-size: var(--font-base);
+  font-weight: var(--weight-semibold);
+}
+
+.pasajeros-table__scroll {
+  overflow-x: auto;
+}
+
+.pasajeros-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-sm);
+}
+
+.pasajeros-table th,
+.pasajeros-table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--higo-gray-200);
+  white-space: nowrap;
+}
+
+.pasajeros-table th {
+  color: var(--higo-gray-500);
+  font-weight: var(--weight-medium);
+}
+
+.pasajeros-table__subtotal {
+  margin-top: var(--space-3);
+  font-size: var(--font-sm);
+  color: var(--higo-gray-600);
+}

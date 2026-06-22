@@ -1,0 +1,41 @@
+.viaje-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.viaje-detalle__loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12);
+}
+
+.viaje-detalle__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--higo-gray-600);
+  font-size: var(--font-sm);
+}
+
+.viaje-detalle__header h1 {
+  font-size: var(--font-xl);
+  margin-bottom: var(--space-1);
+}
+
+.viaje-detalle__header p {
+  color: var(--higo-gray-600);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-2);
+}
+
+.viaje-detalle__section-title {
+  font-size: var(--font-base);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-3);
+}
+
+.viaje-detalle__error {
+  color: var(--higo-error);
+  font-size: var(--font-sm);
+}

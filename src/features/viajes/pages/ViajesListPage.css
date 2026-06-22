@@ -1,0 +1,42 @@
+.viajes-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.viajes-list__header h1 {
+  font-size: var(--font-xl);
+}
+
+.viajes-list__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+.viajes-list__grid h2 {
+  font-size: var(--font-base);
+  margin-bottom: var(--space-1);
+}
+
+.viajes-list__grid p {
+  font-size: var(--font-sm);
+  color: var(--higo-gray-600);
+}
+
+.viajes-list__loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12);
+}
+
+.viajes-list__empty {
+  color: var(--higo-gray-500);
+}
+
+.viajes-list__error {
+  color: var(--higo-error);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-3);
+}
