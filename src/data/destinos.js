@@ -14,6 +14,7 @@ export const DESTINOS = [
   { id: 'trinchera', nombre: 'Trinchera', vehiculo: 'bus', capacidadUnidad: 31 },
   { id: 'mochima', nombre: 'Mochima', vehiculo: 'bus', capacidadUnidad: 31 },
   { id: 'nocturneando-la-guaira', nombre: 'Nocturneando Por la Guaira', vehiculo: 'bus', capacidadUnidad: 31 },
+  { id: 'tambores-san-juan', nombre: 'Tambores de San Juan', vehiculo: 'bus', capacidadUnidad: 31 },
 ];
 
 export function getDestinoById(id) {
