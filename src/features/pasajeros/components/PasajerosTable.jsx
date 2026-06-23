@@ -4,6 +4,7 @@ import { Badge } from '../../../components/ui/Badge.jsx';
 import { Button } from '../../../components/ui/Button.jsx';
 import { Modal } from '../../../components/ui/Modal.jsx';
 import { formatCurrency } from '../../../utils/formatters.js';
+import { formatDesayunoItems } from '../../../data/comidaOpciones.js';
 import './PasajerosTable.css';
 
 function groupByUnidad(pasajeros) {
@@ -13,11 +14,6 @@ function groupByUnidad(pasajeros) {
     groups.get(p.unidad_numero).push(p);
   }
   return [...groups.entries()].sort((a, b) => a[0] - b[0]);
-}
-
-function formatComida(nombre, cantidad) {
-  if (!nombre) return '—';
-  return `${nombre} x${cantidad ?? 1}`;
 }
 
 export function PasajerosTable({ pasajeros, capacidadUnidad, onDeletePasajero }) {
@@ -88,8 +84,8 @@ export function PasajerosTable({ pasajeros, capacidadUnidad, onDeletePasajero })
                       <td>{formatCurrency(p.monto_reservado)}</td>
                       <td>{formatCurrency(p.monto_pendiente)}</td>
                       <td>{p.servicio_comida ? 'Sí' : 'No'}</td>
-                      <td>{p.servicio_comida ? formatComida(p.desayuno_solicitado, p.desayuno_cantidad) : '—'}</td>
-                      <td>{p.servicio_comida ? formatComida(p.almuerzo_solicitado, p.almuerzo_cantidad) : '—'}</td>
+                      <td>{p.servicio_comida ? formatDesayunoItems(p.desayuno_items) : '—'}</td>
+                      <td>{p.servicio_comida ? (p.almuerzo_solicitado || '—') : '—'}</td>
                       <td>
                         <button
                           className="pasajeros-table__delete-btn"
