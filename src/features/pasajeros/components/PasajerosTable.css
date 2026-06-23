@@ -29,6 +29,10 @@
 
 .pasajeros-table__scroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* margen negativo + padding para que el scroll horizontal aproveche todo
+     el ancho de la tarjeta en móvil sin recortar la primera/última columna */
+  scrollbar-width: thin;
 }
 
 .pasajeros-table table {
@@ -62,4 +66,24 @@
   color: var(--higo-gray-900);
   border-top: 2px solid var(--higo-gray-200);
   padding-top: var(--space-3);
+}
+
+@media (max-width: 480px) {
+  .pasajeros-table__unidad {
+    padding: var(--space-3);
+  }
+
+  .pasajeros-table table {
+    font-size: var(--font-xs);
+  }
+
+  .pasajeros-table th,
+  .pasajeros-table td {
+    padding: var(--space-2);
+  }
+
+  .pasajeros-table__subtotal,
+  .pasajeros-table__total {
+    font-size: var(--font-sm);
+  }
 }

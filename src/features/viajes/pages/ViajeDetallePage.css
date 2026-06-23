@@ -39,3 +39,26 @@
   color: var(--higo-error);
   font-size: var(--font-sm);
 }
+
+.viaje-detalle__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.viaje-detalle__delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 480px) {
+  .viaje-detalle__header-actions .higo-btn {
+    flex: 1;
+  }
+
+  .viaje-detalle__delete-actions .higo-btn {
+    flex: 1;
+  }
+}

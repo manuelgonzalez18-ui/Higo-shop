@@ -15,6 +15,41 @@
   gap: var(--space-3);
 }
 
+.viajes-list__card {
+  position: relative;
+}
+
+.viajes-list__card h2 {
+  padding-right: var(--space-8);
+}
+
+.viajes-list__delete {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--higo-gray-400);
+  transition: background 0.15s, color 0.15s;
+}
+
+.viajes-list__delete:hover {
+  background: var(--higo-error-bg, #fee2e2);
+  color: var(--higo-error);
+}
+
+.viajes-list__delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
 .viajes-list__grid h2 {
   font-size: var(--font-base);
   margin-bottom: var(--space-1);
@@ -39,4 +74,28 @@
   color: var(--higo-error);
   font-size: var(--font-sm);
   margin-bottom: var(--space-3);
+}
+
+@media (max-width: 480px) {
+  .viajes-list__header {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .viajes-list__header .higo-btn {
+    flex: 1;
+  }
+
+  .viajes-list__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .viajes-list__delete {
+    width: 36px;
+    height: 36px;
+  }
+
+  .viajes-list__delete-actions .higo-btn {
+    flex: 1;
+  }
 }
