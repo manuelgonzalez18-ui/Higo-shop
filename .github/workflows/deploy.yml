@@ -192,11 +192,11 @@ jobs:
           for i in 1 2 3; do
             echo "Smoke test intento $i/3..."
             if curl -fsS -o /tmp/index.html --max-time 20 "https://higoshop.store/?cb=$(date +%s)"; then
-              if grep -q "Agencia de Viajes" /tmp/index.html; then
+              if grep -q "Gaby Tours" /tmp/index.html; then
                 echo "✓ Smoke test OK — title encontrado en HTML servido."
                 exit 0
               else
-                echo "::warning::HTML sirvio pero NO contiene 'Agencia de Viajes'. Posible cache o deploy parcial."
+                echo "::warning::HTML sirvio pero NO contiene 'Gaby Tours'. Posible cache o deploy parcial."
               fi
             else
               echo "::warning::curl fallo en intento $i."

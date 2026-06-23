@@ -1,1 +1,1 @@
-export const APP_NAME = 'Agencia de Viajes';
+export const APP_NAME = 'Gaby Tours 2021';
