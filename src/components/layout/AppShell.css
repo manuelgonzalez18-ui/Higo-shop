@@ -33,6 +33,19 @@
   color: var(--higo-gray-900);
 }
 
+.app-shell__brand svg {
+  color: var(--higo-blue);
+}
+
+.app-shell__brand-name {
+  font-weight: var(--weight-extrabold);
+  letter-spacing: -0.01em;
+}
+
+.app-shell__brand-year {
+  color: var(--higo-blue);
+}
+
 .app-shell__content {
   flex: 1;
   padding: var(--space-4);

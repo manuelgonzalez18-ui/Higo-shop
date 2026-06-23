@@ -62,8 +62,8 @@
 
 .pasajeros-table__total {
   font-size: var(--font-base);
-  font-weight: var(--weight-semibold);
-  color: var(--higo-gray-900);
+  font-weight: var(--weight-bold);
+  color: var(--higo-blue-dark);
   border-top: 2px solid var(--higo-gray-200);
   padding-top: var(--space-3);
 }

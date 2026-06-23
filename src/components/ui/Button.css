@@ -47,22 +47,22 @@
   border-radius: 10px;
 }
 
-/* ---- Primary ---- */
+/* ---- Primary (acción, verde estilo Gaby Tours) ---- */
 .higo-btn--primary {
-  background-color: var(--higo-blue);
+  background-color: var(--higo-green);
   color: var(--higo-white);
-  border-color: var(--higo-blue);
+  border-color: var(--higo-green);
 }
 
 .higo-btn--primary:hover:not(:disabled) {
-  background-color: var(--higo-blue-dark);
-  border-color: var(--higo-blue-dark);
+  background-color: var(--higo-green-dark);
+  border-color: var(--higo-green-dark);
   box-shadow: var(--shadow-blue);
 }
 
 .higo-btn--primary:active:not(:disabled) {
-  background-color: var(--higo-blue-darker);
-  border-color: var(--higo-blue-darker);
+  background-color: var(--higo-green-darker);
+  border-color: var(--higo-green-darker);
   transform: scale(0.97);
   box-shadow: var(--shadow-blue-lg);
 }
@@ -160,7 +160,7 @@
 
 .higo-btn--secondary .higo-btn__spinner,
 .higo-btn--ghost .higo-btn__spinner {
-  border-color: rgba(37, 99, 235, 0.25);
+  border-color: rgba(249, 115, 22, 0.25);
   border-top-color: var(--higo-blue);
 }
 
