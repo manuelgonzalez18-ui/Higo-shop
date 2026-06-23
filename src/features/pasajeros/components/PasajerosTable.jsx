@@ -1,4 +1,8 @@
+import { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { Badge } from '../../../components/ui/Badge.jsx';
+import { Button } from '../../../components/ui/Button.jsx';
+import { Modal } from '../../../components/ui/Modal.jsx';
 import { formatCurrency } from '../../../utils/formatters.js';
 import './PasajerosTable.css';
 
@@ -11,7 +15,15 @@ function groupByUnidad(pasajeros) {
   return [...groups.entries()].sort((a, b) => a[0] - b[0]);
 }
 
-export function PasajerosTable({ pasajeros, capacidadUnidad }) {
+function formatComida(nombre, cantidad) {
+  if (!nombre) return '—';
+  return `${nombre} x${cantidad ?? 1}`;
+}
+
+export function PasajerosTable({ pasajeros, capacidadUnidad, onDeletePasajero }) {
+  const [pasajeroAEliminar, setPasajeroAEliminar] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
+
   if (!pasajeros.length) {
     return <p className="pasajeros-table__empty">Aún no hay pasajeros registrados.</p>;
   }
@@ -19,6 +31,16 @@ export function PasajerosTable({ pasajeros, capacidadUnidad }) {
   const unidades = groupByUnidad(pasajeros);
   const totalReservado = pasajeros.reduce((sum, p) => sum + Number(p.monto_reservado), 0);
   const totalPendiente = pasajeros.reduce((sum, p) => sum + Number(p.monto_pendiente), 0);
+
+  const handleConfirmarEliminar = async () => {
+    setEliminando(true);
+    try {
+      await onDeletePasajero(pasajeroAEliminar.id);
+      setPasajeroAEliminar(null);
+    } finally {
+      setEliminando(false);
+    }
+  };
 
   return (
     <div className="pasajeros-table">
@@ -51,6 +73,7 @@ export function PasajerosTable({ pasajeros, capacidadUnidad }) {
                     <th>Comida</th>
                     <th>Desayuno</th>
                     <th>Almuerzo</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -65,8 +88,17 @@ export function PasajerosTable({ pasajeros, capacidadUnidad }) {
                       <td>{formatCurrency(p.monto_reservado)}</td>
                       <td>{formatCurrency(p.monto_pendiente)}</td>
                       <td>{p.servicio_comida ? 'Sí' : 'No'}</td>
-                      <td>{p.servicio_comida ? p.desayuno_solicitado : '—'}</td>
-                      <td>{p.servicio_comida ? p.almuerzo_solicitado : '—'}</td>
+                      <td>{p.servicio_comida ? formatComida(p.desayuno_solicitado, p.desayuno_cantidad) : '—'}</td>
+                      <td>{p.servicio_comida ? formatComida(p.almuerzo_solicitado, p.almuerzo_cantidad) : '—'}</td>
+                      <td>
+                        <button
+                          className="pasajeros-table__delete-btn"
+                          aria-label="Eliminar pasajero"
+                          onClick={() => setPasajeroAEliminar(p)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -83,6 +115,30 @@ export function PasajerosTable({ pasajeros, capacidadUnidad }) {
       <p className="pasajeros-table__total">
         Total de todos los clientes — Reservado: {formatCurrency(totalReservado)} · Por cancelar: {formatCurrency(totalPendiente)}
       </p>
+
+      <Modal
+        isOpen={!!pasajeroAEliminar}
+        onClose={() => setPasajeroAEliminar(null)}
+        title="Eliminar pasajero"
+      >
+        {pasajeroAEliminar && (
+          <>
+            <p>
+              ¿Seguro que quieres eliminar a{' '}
+              <strong>{pasajeroAEliminar.nombre} {pasajeroAEliminar.apellido}</strong>? Esta acción
+              no se puede deshacer.
+            </p>
+            <div className="pasajeros-table__delete-actions">
+              <Button variant="secondary" onClick={() => setPasajeroAEliminar(null)} disabled={eliminando}>
+                Cancelar
+              </Button>
+              <Button variant="danger" onClick={handleConfirmarEliminar} loading={eliminando}>
+                Eliminar
+              </Button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

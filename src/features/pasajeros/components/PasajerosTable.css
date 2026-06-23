@@ -68,6 +68,30 @@
   padding-top: var(--space-3);
 }
 
+.pasajeros-table__delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--higo-gray-400);
+  transition: background 0.15s, color 0.15s;
+}
+
+.pasajeros-table__delete-btn:hover {
+  background: var(--higo-error-bg, #fee2e2);
+  color: var(--higo-error);
+}
+
+.pasajeros-table__delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
 @media (max-width: 480px) {
   .pasajeros-table__unidad {
     padding: var(--space-3);

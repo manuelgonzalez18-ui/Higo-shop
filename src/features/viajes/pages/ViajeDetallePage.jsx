@@ -8,7 +8,7 @@ import { Modal } from '../../../components/ui/Modal.jsx';
 import { PasajeroForm } from '../../pasajeros/components/PasajeroForm.jsx';
 import { PasajerosTable } from '../../pasajeros/components/PasajerosTable.jsx';
 import { obtenerViaje, eliminarViaje } from '../../../services/viajeService.js';
-import { listarPasajerosPorViaje, registrarPasajero } from '../../../services/pasajeroService.js';
+import { listarPasajerosPorViaje, registrarPasajero, eliminarPasajero } from '../../../services/pasajeroService.js';
 import { generarPdfViaje } from '../../../services/pdfService.js';
 import { formatCurrency, formatDate } from '../../../utils/formatters.js';
 import './ViajeDetallePage.css';
@@ -59,6 +59,16 @@ export function ViajeDetallePage() {
 
   const handleGenerarPdf = () => {
     generarPdfViaje(viaje, pasajeros);
+  };
+
+  const handleEliminarPasajero = async (pasajeroId) => {
+    setError(null);
+    try {
+      await eliminarPasajero(pasajeroId);
+      await cargar();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleEliminar = async () => {
@@ -143,7 +153,11 @@ export function ViajeDetallePage() {
 
       <Card>
         <h2 className="viaje-detalle__section-title">Pasajeros por unidad</h2>
-        <PasajerosTable pasajeros={pasajeros} capacidadUnidad={viaje.capacidad_unidad} />
+        <PasajerosTable
+          pasajeros={pasajeros}
+          capacidadUnidad={viaje.capacidad_unidad}
+          onDeletePasajero={handleEliminarPasajero}
+        />
       </Card>
     </div>
   );
