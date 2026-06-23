@@ -38,3 +38,8 @@ export async function crearViaje({
   if (error) throw error;
   return data;
 }
+
+export async function eliminarViaje(viajeId) {
+  const { error } = await supabase.from('viajes').delete().eq('id', viajeId);
+  if (error) throw error;
+}

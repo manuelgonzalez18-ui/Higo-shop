@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card.jsx';
 import { Button } from '../../../components/ui/Button.jsx';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
+import { Modal } from '../../../components/ui/Modal.jsx';
 import { NuevoViajeModal } from '../components/NuevoViajeModal.jsx';
-import { crearViaje, listarViajes } from '../../../services/viajeService.js';
+import { crearViaje, eliminarViaje, listarViajes } from '../../../services/viajeService.js';
 import { formatCurrency, formatDate } from '../../../utils/formatters.js';
 import './ViajesListPage.css';
 
@@ -15,6 +16,8 @@ export function ViajesListPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
+  const [viajeAEliminar, setViajeAEliminar] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   const cargar = async () => {
@@ -46,6 +49,20 @@ export function ViajesListPage() {
     }
   };
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      await eliminarViaje(viajeAEliminar.id);
+      setViajeAEliminar(null);
+      await cargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="viajes-list">
       <div className="viajes-list__header">
@@ -62,7 +79,17 @@ export function ViajesListPage() {
       ) : (
         <div className="viajes-list__grid">
           {viajes.map((v) => (
-            <Card key={v.id} hoverable onClick={() => navigate(`/viajes/${v.id}`)}>
+            <Card key={v.id} hoverable className="viajes-list__card" onClick={() => navigate(`/viajes/${v.id}`)}>
+              <button
+                className="viajes-list__delete"
+                aria-label="Eliminar viaje"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setViajeAEliminar(v);
+                }}
+              >
+                <Trash2 size={16} />
+              </button>
               <h2>{v.destino_nombre}</h2>
               <p>{formatDate(v.fecha)}</p>
               <p>
@@ -80,6 +107,26 @@ export function ViajesListPage() {
         onCreate={handleCreate}
         creating={creating}
       />
+
+      <Modal
+        isOpen={!!viajeAEliminar}
+        onClose={() => setViajeAEliminar(null)}
+        title="Eliminar viaje"
+      >
+        <p>
+          ¿Seguro que quieres eliminar el viaje a <strong>{viajeAEliminar?.destino_nombre}</strong>
+          {' '}({viajeAEliminar && formatDate(viajeAEliminar.fecha)})? Se eliminarán también todos
+          sus pasajeros registrados. Esta acción no se puede deshacer.
+        </p>
+        <div className="viajes-list__delete-actions">
+          <Button variant="secondary" onClick={() => setViajeAEliminar(null)} disabled={deleting}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={handleDelete} loading={deleting}>
+            Eliminar
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileDown } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, FileDown, Trash2 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card.jsx';
 import { Button } from '../../../components/ui/Button.jsx';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
+import { Modal } from '../../../components/ui/Modal.jsx';
 import { PasajeroForm } from '../../pasajeros/components/PasajeroForm.jsx';
 import { PasajerosTable } from '../../pasajeros/components/PasajerosTable.jsx';
-import { obtenerViaje } from '../../../services/viajeService.js';
+import { obtenerViaje, eliminarViaje } from '../../../services/viajeService.js';
 import { listarPasajerosPorViaje, registrarPasajero } from '../../../services/pasajeroService.js';
 import { generarPdfViaje } from '../../../services/pdfService.js';
 import { formatCurrency, formatDate } from '../../../utils/formatters.js';
@@ -14,11 +15,14 @@ import './ViajeDetallePage.css';
 
 export function ViajeDetallePage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [viaje, setViaje] = useState(null);
   const [pasajeros, setPasajeros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -57,6 +61,18 @@ export function ViajeDetallePage() {
     generarPdfViaje(viaje, pasajeros);
   };
 
+  const handleEliminar = async () => {
+    setEliminando(true);
+    setError(null);
+    try {
+      await eliminarViaje(id);
+      navigate('/');
+    } catch (err) {
+      setError(err.message);
+      setEliminando(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="viaje-detalle__loading">
@@ -88,12 +104,37 @@ export function ViajeDetallePage() {
         <p>
           {pasajeros.length} pasajeros · Reservado: {formatCurrency(totalReservado)} · Pendiente: {formatCurrency(totalPendiente)}
         </p>
-        <Button icon={<FileDown size={16} />} onClick={handleGenerarPdf} disabled={!pasajeros.length}>
-          Generar PDF
-        </Button>
+        <div className="viaje-detalle__header-actions">
+          <Button icon={<FileDown size={16} />} onClick={handleGenerarPdf} disabled={!pasajeros.length}>
+            Generar PDF
+          </Button>
+          <Button variant="danger" icon={<Trash2 size={16} />} onClick={() => setConfirmandoEliminar(true)}>
+            Eliminar viaje
+          </Button>
+        </div>
       </Card>
 
       {error && <p className="viaje-detalle__error">{error}</p>}
+
+      <Modal
+        isOpen={confirmandoEliminar}
+        onClose={() => setConfirmandoEliminar(false)}
+        title="Eliminar viaje"
+      >
+        <p>
+          ¿Seguro que quieres eliminar este viaje a <strong>{viaje.destino_nombre}</strong>?
+          Se eliminarán también los {pasajeros.length} pasajeros registrados. Esta acción no se
+          puede deshacer.
+        </p>
+        <div className="viaje-detalle__delete-actions">
+          <Button variant="secondary" onClick={() => setConfirmandoEliminar(false)} disabled={eliminando}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={handleEliminar} loading={eliminando}>
+            Eliminar
+          </Button>
+        </div>
+      </Modal>
 
       <Card>
         <h2 className="viaje-detalle__section-title">Registrar pasajero</h2>

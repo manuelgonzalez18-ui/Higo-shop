@@ -15,6 +15,37 @@
   gap: var(--space-3);
 }
 
+.viajes-list__card {
+  position: relative;
+}
+
+.viajes-list__delete {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--higo-gray-400);
+  transition: background 0.15s, color 0.15s;
+}
+
+.viajes-list__delete:hover {
+  background: var(--higo-error-bg, #fee2e2);
+  color: var(--higo-error);
+}
+
+.viajes-list__delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
 .viajes-list__grid h2 {
   font-size: var(--font-base);
   margin-bottom: var(--space-1);
