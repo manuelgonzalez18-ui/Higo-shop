@@ -8,7 +8,9 @@ export function AppShell() {
       <header className="app-shell__header">
         <Link to="/" className="app-shell__brand">
           <Bus size={20} />
-          <span>Gaby Tours 2021</span>
+          <span className="app-shell__brand-name">
+            Gaby Tours <span className="app-shell__brand-year">2021</span>
+          </span>
         </Link>
       </header>
 
