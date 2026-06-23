@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { formatCurrency, formatDate } from '../utils/formatters.js';
 
 const COLUMNS = [
-  'Unidad', 'Grupo', 'Nombre', 'Apellido', 'Cédula', 'Teléfono',
+  'Unidad', 'Grupo', 'Nombre', 'Apellido', 'Cédula', 'Teléfono', 'Punto de recogida',
   'Reservado', 'Pendiente', 'Comida',
 ];
 
@@ -17,6 +17,7 @@ function buildRows(pasajeros) {
     p.apellido,
     p.cedula,
     p.telefono,
+    p.punto_recogida || '—',
     formatCurrency(p.monto_reservado),
     formatCurrency(p.monto_pendiente),
     p.servicio_comida ? 'Sí' : 'No',

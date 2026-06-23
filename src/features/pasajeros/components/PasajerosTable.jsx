@@ -45,6 +45,7 @@ export function PasajerosTable({ pasajeros, capacidadUnidad }) {
                     <th>Apellido</th>
                     <th>Cédula</th>
                     <th>Teléfono</th>
+                    <th>Punto de recogida</th>
                     <th>Reservado</th>
                     <th>Pendiente</th>
                     <th>Comida</th>
@@ -60,6 +61,7 @@ export function PasajerosTable({ pasajeros, capacidadUnidad }) {
                       <td>{p.apellido}</td>
                       <td>{p.cedula}</td>
                       <td>{p.telefono}</td>
+                      <td>{p.punto_recogida || '—'}</td>
                       <td>{formatCurrency(p.monto_reservado)}</td>
                       <td>{formatCurrency(p.monto_pendiente)}</td>
                       <td>{p.servicio_comida ? 'Sí' : 'No'}</td>

@@ -12,7 +12,7 @@ export async function listarPasajerosPorViaje(viajeId) {
 
 export async function registrarPasajero(viajeId, {
   grupoNumero, nombre, apellido, cedula, telefono, montoReservado, servicioComida,
-  desayunoSolicitado, almuerzoSolicitado,
+  desayunoSolicitado, almuerzoSolicitado, puntoRecogida,
 }) {
   const { data, error } = await supabase.rpc('registrar_pasajero', {
     p_viaje_id: viajeId,
@@ -25,6 +25,7 @@ export async function registrarPasajero(viajeId, {
     p_servicio_comida: servicioComida,
     p_desayuno_solicitado: desayunoSolicitado || null,
     p_almuerzo_solicitado: almuerzoSolicitado || null,
+    p_punto_recogida: puntoRecogida || null,
   });
   if (error) throw error;
   return data;
