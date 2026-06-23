@@ -1,13 +1,14 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrency, formatDate } from '../utils/formatters.js';
+import { formatDesayunoItems } from '../data/comidaOpciones.js';
 
 const COLUMNS = [
   'Unidad', 'Grupo', 'Nombre', 'Apellido', 'Cédula', 'Teléfono', 'Punto de recogida',
   'Reservado', 'Pendiente', 'Comida',
 ];
 
-const COLUMNS_COMIDA = ['Unidad', 'Grupo', 'Nombre', 'Apellido', 'Desayuno', 'Cant.', 'Almuerzo', 'Cant.'];
+const COLUMNS_COMIDA = ['Unidad', 'Grupo', 'Nombre', 'Apellido', 'Desayuno', 'Almuerzo'];
 
 const COLUMNS_TOTALES = ['Plato', 'Cantidad total'];
 
@@ -34,23 +35,22 @@ function buildRowsComida(pasajeros) {
       p.grupo_numero,
       p.nombre,
       p.apellido,
-      p.desayuno_solicitado || '—',
-      p.desayuno_solicitado ? (p.desayuno_cantidad ?? 1) : '—',
+      formatDesayunoItems(p.desayuno_items),
       p.almuerzo_solicitado || '—',
-      p.almuerzo_solicitado ? (p.almuerzo_cantidad ?? 1) : '—',
     ]);
 }
 
 function buildRowsTotales(pasajeros) {
   const totales = new Map();
   for (const p of pasajeros) {
-    if (p.servicio_comida && p.desayuno_solicitado) {
-      const cant = Number(p.desayuno_cantidad ?? 1);
-      totales.set(p.desayuno_solicitado, (totales.get(p.desayuno_solicitado) || 0) + cant);
+    if (!p.servicio_comida) continue;
+    const items = p.desayuno_items && typeof p.desayuno_items === 'object' ? p.desayuno_items : {};
+    for (const [relleno, cant] of Object.entries(items)) {
+      const n = Number(cant) || 0;
+      if (n > 0) totales.set(relleno, (totales.get(relleno) || 0) + n);
     }
-    if (p.servicio_comida && p.almuerzo_solicitado) {
-      const cant = Number(p.almuerzo_cantidad ?? 1);
-      totales.set(p.almuerzo_solicitado, (totales.get(p.almuerzo_solicitado) || 0) + cant);
+    if (p.almuerzo_solicitado) {
+      totales.set(p.almuerzo_solicitado, (totales.get(p.almuerzo_solicitado) || 0) + 1);
     }
   }
   return [...totales.entries()].sort((a, b) => a[0].localeCompare(b[0]));
