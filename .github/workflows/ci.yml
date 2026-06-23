@@ -43,5 +43,5 @@ jobs:
       - name: Verificar bundle producido
         run: |
           test -f dist/index.html || { echo "::error::dist/index.html no se genero"; exit 1; }
-          grep -q "Agencia de Viajes" dist/index.html || { echo "::error::index.html no contiene el title esperado"; exit 1; }
+          grep -q "Gaby Tours" dist/index.html || { echo "::error::index.html no contiene el title esperado"; exit 1; }
           echo "Bundle OK"
