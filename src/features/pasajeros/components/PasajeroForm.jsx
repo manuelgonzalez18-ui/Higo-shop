@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Input } from '../../../components/ui/Input.jsx';
 import { Button } from '../../../components/ui/Button.jsx';
+import { PUNTOS_RECOGIDA } from '../../../data/puntosRecogida.js';
+import { OPCIONES_DESAYUNO, OPCIONES_ALMUERZO } from '../../../data/comidaOpciones.js';
 import './PasajeroForm.css';
 
 const initialState = {
@@ -10,9 +12,12 @@ const initialState = {
   telefono: '',
   grupoNumero: '',
   montoReservado: '',
+  puntoRecogida: PUNTOS_RECOGIDA[0],
   servicioComida: false,
-  desayunoSolicitado: '',
-  almuerzoSolicitado: '',
+  desayunoSolicitado: OPCIONES_DESAYUNO[0],
+  desayunoCantidad: '1',
+  almuerzoSolicitado: OPCIONES_ALMUERZO[0],
+  almuerzoCantidad: '1',
 };
 
 export function PasajeroForm({ onSubmit, submitting }) {
@@ -32,9 +37,12 @@ export function PasajeroForm({ onSubmit, submitting }) {
       telefono: form.telefono.trim(),
       grupoNumero: Number(form.grupoNumero),
       montoReservado: Number(form.montoReservado) || 0,
+      puntoRecogida: form.puntoRecogida,
       servicioComida: form.servicioComida,
-      desayunoSolicitado: form.servicioComida ? form.desayunoSolicitado.trim() : '',
-      almuerzoSolicitado: form.servicioComida ? form.almuerzoSolicitado.trim() : '',
+      desayunoSolicitado: form.servicioComida ? form.desayunoSolicitado : '',
+      desayunoCantidad: form.servicioComida ? Number(form.desayunoCantidad) || 1 : null,
+      almuerzoSolicitado: form.servicioComida ? form.almuerzoSolicitado : '',
+      almuerzoCantidad: form.servicioComida ? Number(form.almuerzoCantidad) || 1 : null,
     });
     setForm(initialState);
   };
@@ -48,6 +56,15 @@ export function PasajeroForm({ onSubmit, submitting }) {
         <Input label="Teléfono" value={form.telefono} onChange={setField('telefono')} required />
         <Input label="Grupo" type="number" min="1" value={form.grupoNumero} onChange={setField('grupoNumero')} required />
         <Input label="Monto reservado ($)" type="number" min="0" step="0.01" value={form.montoReservado} onChange={setField('montoReservado')} required />
+
+        <label className="pasajero-form__field">
+          <span className="pasajero-form__field-label">Punto de recogida</span>
+          <select className="pasajero-form__select" value={form.puntoRecogida} onChange={setField('puntoRecogida')} required>
+            {PUNTOS_RECOGIDA.map((punto) => (
+              <option key={punto} value={punto}>{punto}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <label className="pasajero-form__checkbox">
@@ -57,8 +74,39 @@ export function PasajeroForm({ onSubmit, submitting }) {
 
       {form.servicioComida && (
         <div className="pasajero-form__grid">
-          <Input label="Desayuno solicitado" value={form.desayunoSolicitado} onChange={setField('desayunoSolicitado')} required />
-          <Input label="Almuerzo solicitado" value={form.almuerzoSolicitado} onChange={setField('almuerzoSolicitado')} required />
+          <label className="pasajero-form__field">
+            <span className="pasajero-form__field-label">Desayuno</span>
+            <select className="pasajero-form__select" value={form.desayunoSolicitado} onChange={setField('desayunoSolicitado')} required>
+              {OPCIONES_DESAYUNO.map((opcion) => (
+                <option key={opcion} value={opcion}>{opcion}</option>
+              ))}
+            </select>
+          </label>
+          <Input
+            label="Cantidad de desayuno"
+            type="number"
+            min="1"
+            value={form.desayunoCantidad}
+            onChange={setField('desayunoCantidad')}
+            required
+          />
+
+          <label className="pasajero-form__field">
+            <span className="pasajero-form__field-label">Almuerzo</span>
+            <select className="pasajero-form__select" value={form.almuerzoSolicitado} onChange={setField('almuerzoSolicitado')} required>
+              {OPCIONES_ALMUERZO.map((opcion) => (
+                <option key={opcion} value={opcion}>{opcion}</option>
+              ))}
+            </select>
+          </label>
+          <Input
+            label="Cantidad de almuerzo"
+            type="number"
+            min="1"
+            value={form.almuerzoCantidad}
+            onChange={setField('almuerzoCantidad')}
+            required
+          />
         </div>
       )}
 
