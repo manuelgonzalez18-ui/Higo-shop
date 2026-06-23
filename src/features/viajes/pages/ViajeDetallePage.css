@@ -52,3 +52,13 @@
   gap: var(--space-3);
   margin-top: var(--space-4);
 }
+
+@media (max-width: 480px) {
+  .viaje-detalle__header-actions .higo-btn {
+    flex: 1;
+  }
+
+  .viaje-detalle__delete-actions .higo-btn {
+    flex: 1;
+  }
+}

@@ -167,6 +167,15 @@ input, textarea, select {
   background: none;
 }
 
+/* En iOS Safari, un input con font-size < 16px hace que el navegador
+   haga zoom automático al enfocarlo. Forzamos 16px en pantallas táctiles
+   pequeñas para evitar ese salto incómodo. */
+@media (max-width: 640px) {
+  input, textarea, select, .higo-input__field {
+    font-size: 16px;
+  }
+}
+
 img, svg {
   display: block;
   max-width: 100%;

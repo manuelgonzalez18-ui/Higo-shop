@@ -19,6 +19,10 @@
   position: relative;
 }
 
+.viajes-list__card h2 {
+  padding-right: var(--space-8);
+}
+
 .viajes-list__delete {
   position: absolute;
   top: var(--space-2);
@@ -70,4 +74,28 @@
   color: var(--higo-error);
   font-size: var(--font-sm);
   margin-bottom: var(--space-3);
+}
+
+@media (max-width: 480px) {
+  .viajes-list__header {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .viajes-list__header .higo-btn {
+    flex: 1;
+  }
+
+  .viajes-list__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .viajes-list__delete {
+    width: 36px;
+    height: 36px;
+  }
+
+  .viajes-list__delete-actions .higo-btn {
+    flex: 1;
+  }
 }
