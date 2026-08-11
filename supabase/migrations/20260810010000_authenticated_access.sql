@@ -6,6 +6,7 @@ alter table pagos enable row level security;
 
 drop policy if exists "acceso publico viajes" on viajes;
 drop policy if exists "acceso publico pasajeros" on pasajeros;
+drop policy if exists "acceso publico pagos" on pagos;
 drop policy if exists "authenticated viajes" on viajes;
 drop policy if exists "authenticated pasajeros" on pasajeros;
 drop policy if exists "authenticated pagos" on pagos;
