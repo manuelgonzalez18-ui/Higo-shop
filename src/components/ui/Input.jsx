@@ -1,4 +1,4 @@
-import { forwardRef, useState, useId } from 'react';
+import { forwardRef, useState, useId, isValidElement } from 'react';
 import './Input.css';
 
 /**
@@ -6,7 +6,7 @@ import './Input.css';
  *
  * @param {string}          label       – floating label text
  * @param {string}          error       – error message (shown below)
- * @param {React.Component} icon        – lucide icon component (rendered as <Icon />)
+ * @param {React.Component|React.ReactElement} icon – lucide icon component or element
  * @param {boolean}         disabled
  */
 export const Input = forwardRef(function Input(
@@ -38,12 +38,16 @@ export const Input = forwardRef(function Input(
     .filter(Boolean)
     .join(' ');
 
+  const iconNode = Icon
+    ? (isValidElement(Icon) ? Icon : <Icon />)
+    : null;
+
   return (
     <div className={`higo-input ${className}`}>
       <div className={wrapperClasses}>
-        {Icon && (
+        {iconNode && (
           <span className="higo-input__icon" aria-hidden="true">
-            <Icon />
+            {iconNode}
           </span>
         )}
 
