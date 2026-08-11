@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, FileDown, RefreshCw, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileDown, RefreshCw, Save, Sheet, Trash2 } from 'lucide-react';
 import { Card } from '../../../components/ui/Card.jsx';
 import { Button } from '../../../components/ui/Button.jsx';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
@@ -10,6 +10,7 @@ import { PasajerosTable } from '../../pasajeros/components/PasajerosTable.jsx';
 import { obtenerViaje, eliminarViaje } from '../../../services/viajeService.js';
 import { listarPasajerosPorViaje, registrarPasajero, eliminarPasajero, actualizarPasajero, registrarPago } from '../../../services/pasajeroService.js';
 import { generarPdfViaje } from '../../../services/pdfService.js';
+import { exportarCsvPasajeros, exportarRespaldoViaje } from '../../../services/exportService.js';
 import { formatCurrency, formatDate } from '../../../utils/formatters.js';
 import './ViajeDetallePage.css';
 
@@ -75,7 +76,6 @@ export function ViajeDetallePage() {
   };
 
   if (loading) return <div className="viaje-detalle__loading"><Spinner /></div>;
-
   if (!viaje) return <div><p>{error || 'No se encontró el viaje.'}</p><Button icon={<RefreshCw size={16} />} onClick={cargar}>Reintentar</Button></div>;
 
   const totalReservado = pasajeros.reduce((sum, p) => sum + Number(p.monto_reservado), 0);
@@ -90,7 +90,9 @@ export function ViajeDetallePage() {
         <p>{formatDate(viaje.fecha)} · Capacidad por unidad: {viaje.capacidad_unidad} · Solo traslado: {formatCurrency(viaje.precio_pasajero)} · Con comida: {formatCurrency(viaje.precio_pasajero_comida)}</p>
         <p>{pasajeros.length} pasajeros · Reservado: {formatCurrency(totalReservado)} · Pendiente: {formatCurrency(totalPendiente)}</p>
         <div className="viaje-detalle__header-actions">
-          <Button icon={<FileDown size={16} />} onClick={() => generarPdfViaje(viaje, pasajeros)} disabled={!pasajeros.length}>Generar PDF</Button>
+          <Button icon={<FileDown size={16} />} onClick={() => generarPdfViaje(viaje, pasajeros)} disabled={!pasajeros.length}>PDF</Button>
+          <Button variant="secondary" icon={<Sheet size={16} />} onClick={() => exportarCsvPasajeros(viaje, pasajeros)} disabled={!pasajeros.length}>CSV</Button>
+          <Button variant="secondary" icon={<Save size={16} />} onClick={() => exportarRespaldoViaje(viaje, pasajeros)}>Respaldo</Button>
           <Button variant="secondary" icon={<RefreshCw size={16} />} onClick={cargar}>Actualizar</Button>
           <Button variant="danger" icon={<Trash2 size={16} />} onClick={() => setConfirmandoEliminar(true)}>Eliminar viaje</Button>
         </div>
@@ -104,7 +106,6 @@ export function ViajeDetallePage() {
       </Modal>
 
       <Card><h2 className="viaje-detalle__section-title">Registrar pasajero</h2><PasajeroForm onSubmit={handleRegistrar} submitting={submitting} /></Card>
-
       <Card><h2 className="viaje-detalle__section-title">Pasajeros por unidad</h2><PasajerosTable pasajeros={pasajeros} capacidadUnidad={viaje.capacidad_unidad} onDeletePasajero={handleEliminarPasajero} onUpdatePasajero={handleActualizarPasajero} onRegistrarPago={handleRegistrarPago} /></Card>
     </div>
   );
