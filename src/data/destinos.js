@@ -15,6 +15,7 @@ export const DESTINOS = [
   { id: 'cayo-sal', nombre: 'Cayo Sal', vehiculo: 'bus', capacidadUnidad: 31 },
   { id: 'cayo-azul', nombre: 'Cayo Azul', vehiculo: 'bus', capacidadUnidad: 31 },
   { id: 'caracolito', nombre: 'Caracolito', vehiculo: 'bus', capacidadUnidad: 31 },
+  { id: 'playa-escondida', nombre: 'Playa Escondida', vehiculo: 'bus', capacidadUnidad: 31 },
   { id: 'playa-kanaloa', nombre: 'Playa Kanaloa', vehiculo: 'bus', capacidadUnidad: 31 },
   { id: 'playa-buche', nombre: 'Playa Buche', vehiculo: 'bus', capacidadUnidad: 31 },
   { id: 'la-playita', nombre: 'La Playita', vehiculo: 'bus', capacidadUnidad: 31 },
