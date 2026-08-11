@@ -1,0 +1,17 @@
+{
+  "name": "Gaby Tours 2021",
+  "short_name": "Gaby Tours",
+  "description": "Gestión de viajes, pasajeros y pagos de Gaby Tours",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f4c81",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
