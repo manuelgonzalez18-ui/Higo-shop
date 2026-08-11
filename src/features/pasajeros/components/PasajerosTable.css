@@ -1,113 +1,30 @@
-.pasajeros-table {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-}
+.pasajeros-table { display:flex; flex-direction:column; gap:var(--space-6); }
+.pasajeros-table__empty { color:var(--higo-gray-500); font-size:var(--font-sm); }
+.pasajeros-table__unidad { border:1px solid var(--higo-gray-200); border-radius:var(--radius-md); padding:var(--space-4); }
+.pasajeros-table__unidad-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-3); }
+.pasajeros-table__unidad-header h3 { font-size:var(--font-base); font-weight:var(--weight-semibold); }
+.pasajeros-table__scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
+.pasajeros-table table { width:100%; border-collapse:collapse; font-size:var(--font-sm); }
+.pasajeros-table th,.pasajeros-table td { text-align:left; padding:var(--space-2) var(--space-3); border-bottom:1px solid var(--higo-gray-200); white-space:nowrap; }
+.pasajeros-table th { color:var(--higo-gray-500); font-weight:var(--weight-medium); }
+.pasajeros-table__subtotal { margin-top:var(--space-3); font-size:var(--font-sm); color:var(--higo-gray-600); }
+.pasajeros-table__total { font-size:var(--font-base); font-weight:var(--weight-bold); color:var(--higo-blue-dark); border-top:2px solid var(--higo-gray-200); padding-top:var(--space-3); }
+.pasajeros-table__actions { display:flex; gap:6px; }
+.pasajeros-table__actions button { display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:var(--radius-md); background:var(--higo-gray-50); color:var(--higo-gray-600); }
+.pasajeros-table__actions button:hover { background:var(--higo-gray-100); }
+.pasajeros-table__delete-actions { display:flex; justify-content:flex-end; gap:var(--space-3); margin-top:var(--space-4); }
+.pasajeros-table__mobile { display:none; }
+.pasajeros-table__form { display:grid; gap:var(--space-3); }
+.pasajeros-table__form label { display:grid; gap:6px; font-size:var(--font-sm); }
+.pasajeros-table__form select { width:100%; padding:10px; border:1px solid var(--higo-gray-300); border-radius:var(--radius-md); background:white; }
 
-.pasajeros-table__empty {
-  color: var(--higo-gray-500);
-  font-size: var(--font-sm);
-}
-
-.pasajeros-table__unidad {
-  border: 1px solid var(--higo-gray-200);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-}
-
-.pasajeros-table__unidad-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-3);
-}
-
-.pasajeros-table__unidad-header h3 {
-  font-size: var(--font-base);
-  font-weight: var(--weight-semibold);
-}
-
-.pasajeros-table__scroll {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  /* margen negativo + padding para que el scroll horizontal aproveche todo
-     el ancho de la tarjeta en móvil sin recortar la primera/última columna */
-  scrollbar-width: thin;
-}
-
-.pasajeros-table table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--font-sm);
-}
-
-.pasajeros-table th,
-.pasajeros-table td {
-  text-align: left;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--higo-gray-200);
-  white-space: nowrap;
-}
-
-.pasajeros-table th {
-  color: var(--higo-gray-500);
-  font-weight: var(--weight-medium);
-}
-
-.pasajeros-table__subtotal {
-  margin-top: var(--space-3);
-  font-size: var(--font-sm);
-  color: var(--higo-gray-600);
-}
-
-.pasajeros-table__total {
-  font-size: var(--font-base);
-  font-weight: var(--weight-bold);
-  color: var(--higo-blue-dark);
-  border-top: 2px solid var(--higo-gray-200);
-  padding-top: var(--space-3);
-}
-
-.pasajeros-table__delete-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--higo-gray-400);
-  transition: background 0.15s, color 0.15s;
-}
-
-.pasajeros-table__delete-btn:hover {
-  background: var(--higo-error-bg, #fee2e2);
-  color: var(--higo-error);
-}
-
-.pasajeros-table__delete-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-}
-
-@media (max-width: 480px) {
-  .pasajeros-table__unidad {
-    padding: var(--space-3);
-  }
-
-  .pasajeros-table table {
-    font-size: var(--font-xs);
-  }
-
-  .pasajeros-table th,
-  .pasajeros-table td {
-    padding: var(--space-2);
-  }
-
-  .pasajeros-table__subtotal,
-  .pasajeros-table__total {
-    font-size: var(--font-sm);
-  }
+@media (max-width: 700px) {
+  .pasajeros-table__desktop { display:none; }
+  .pasajeros-table__mobile { display:grid; gap:var(--space-3); }
+  .pasajeros-table__unidad { padding:var(--space-3); }
+  .pasajeros-table__card { border:1px solid var(--higo-gray-200); border-radius:var(--radius-md); padding:var(--space-3); background:var(--higo-gray-50, #fafafa); }
+  .pasajeros-table__card-head { display:flex; justify-content:space-between; gap:var(--space-2); align-items:center; }
+  .pasajeros-table__card p { margin:6px 0 0; font-size:var(--font-sm); color:var(--higo-gray-600); }
+  .pasajeros-table__card-actions { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:var(--space-3); }
+  .pasajeros-table__subtotal,.pasajeros-table__total { font-size:var(--font-sm); }
 }
