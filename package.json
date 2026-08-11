@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "node scripts/validate-env.mjs && vite build",
+    "preview": "vite preview",
+    "check": "node scripts/validate-env.mjs && vite build"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.4",
