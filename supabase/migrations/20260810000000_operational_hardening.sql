@@ -1,6 +1,6 @@
--- Etapa 1-3: integridad, pagos, auditoría y seguridad para Gaby Tours.
+-- Etapas operativas: integridad, pagos, edición y reordenamiento.
+-- Esta migración es segura de aplicar antes del corte a autenticación.
 
--- Reglas de integridad básicas.
 alter table viajes
   add constraint viajes_capacidad_positiva check (capacidad_unidad > 0) not valid,
   add constraint viajes_precio_no_negativo check (precio_pasajero >= 0) not valid,
@@ -14,7 +14,6 @@ alter table pasajeros
 create unique index if not exists pasajeros_viaje_cedula_uidx
   on pasajeros(viaje_id, lower(trim(cedula)));
 
--- Historial de pagos: evita perder detalle cuando un pasajero abona varias veces.
 create table if not exists pagos (
   id uuid primary key default gen_random_uuid(),
   pasajero_id uuid not null references pasajeros(id) on delete cascade,
@@ -26,7 +25,6 @@ create table if not exists pagos (
 );
 create index if not exists pagos_pasajero_id_idx on pagos(pasajero_id, created_at);
 
--- Recalcula orden/unidad después de bajas para no dejar huecos ni unidades fantasma.
 create or replace function reordenar_pasajeros(p_viaje_id uuid)
 returns void
 language plpgsql
@@ -71,7 +69,6 @@ begin
 end;
 $$;
 
--- Edición controlada: recalcula pendiente según tarifa vigente.
 create or replace function actualizar_pasajero(
   p_pasajero_id uuid,
   p_nombre text,
@@ -154,22 +151,8 @@ begin
 end;
 $$;
 
--- Endurecimiento de acceso: sólo usuarios autenticados pueden operar.
-alter table viajes enable row level security;
-alter table pasajeros enable row level security;
-alter table pagos enable row level security;
-
-drop policy if exists "acceso publico viajes" on viajes;
-drop policy if exists "acceso publico pasajeros" on pasajeros;
-drop policy if exists "authenticated viajes" on viajes;
-drop policy if exists "authenticated pasajeros" on pasajeros;
-drop policy if exists "authenticated pagos" on pagos;
-
-create policy "authenticated viajes" on viajes for all to authenticated using (true) with check (true);
-create policy "authenticated pasajeros" on pasajeros for all to authenticated using (true) with check (true);
-create policy "authenticated pagos" on pagos for all to authenticated using (true) with check (true);
-
-grant execute on function reordenar_pasajeros(uuid) to authenticated;
-grant execute on function eliminar_pasajero_seguro(uuid) to authenticated;
-grant execute on function actualizar_pasajero(uuid,text,text,text,text,int,text,boolean,jsonb,text) to authenticated;
-grant execute on function registrar_pago(uuid,numeric,text,text) to authenticated;
+-- Mientras la aplicación siga sin login en producción, conserva compatibilidad anon.
+grant execute on function reordenar_pasajeros(uuid) to anon, authenticated;
+grant execute on function eliminar_pasajero_seguro(uuid) to anon, authenticated;
+grant execute on function actualizar_pasajero(uuid,text,text,text,text,int,text,boolean,jsonb,text) to anon, authenticated;
+grant execute on function registrar_pago(uuid,numeric,text,text) to anon, authenticated;
