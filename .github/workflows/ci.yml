@@ -32,10 +32,10 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: Build
+      - name: Build de validación (no se despliega)
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-key-00000000000000000000
         run: npm run build
 
       - name: Verificar bundle producido
