@@ -1,26 +1,20 @@
-name: CI — Build check
+name: CI — Build and test
 
-# Quality gate previo al merge: corre `npm ci && npm run build` en cada PR
-# que apunte a main. Es el primer escalón del checklist propuesto en
-# DEVOPS_OPERATIVE_ASSESSMENT.md (Fase 0). Se ampliará con lint/typecheck/
-# tests cuando se agreguen al proyecto.
 on:
   pull_request:
     branches:
       - main
     paths-ignore:
       - '**/*.md'
-      - 'supabase/migrations/**'
   workflow_dispatch:
 
-# Cancelar corridas viejas del mismo PR cuando entran nuevos commits.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Build (Vite)
+    name: Tests + Vite build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,9 +29,13 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
-      - name: Build (con fallback publico de Supabase para PRs sin secrets)
-        # El bundle de PR es solo para validar que compila — usa el
-        # fallback interno de Supabase. NO se publica este artifact.
+      - name: Unit tests
+        run: npm test
+
+      - name: Build de validación (no se despliega)
+        env:
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-key-00000000000000000000
         run: npm run build
 
       - name: Verificar bundle producido
