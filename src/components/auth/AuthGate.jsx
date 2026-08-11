@@ -3,15 +3,19 @@ import { supabase } from '../../services/supabase.js';
 import { Button } from '../ui/Button.jsx';
 import { Input } from '../ui/Input.jsx';
 
+const AUTH_REQUIRED = String(import.meta.env.VITE_REQUIRE_AUTH ?? 'false').toLowerCase() === 'true';
+
 export function AuthGate({ children }) {
   const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(AUTH_REQUIRED);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (!AUTH_REQUIRED) return undefined;
+
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session ?? null);
       setLoading(false);
@@ -34,6 +38,8 @@ export function AuthGate({ children }) {
     if (loginError) setError('No se pudo iniciar sesión. Verifica correo y contraseña.');
     setSubmitting(false);
   };
+
+  if (!AUTH_REQUIRED) return children;
 
   if (loading) {
     return <main style={{ maxWidth: 460, margin: '80px auto', padding: 24 }}>Comprobando sesión…</main>;
