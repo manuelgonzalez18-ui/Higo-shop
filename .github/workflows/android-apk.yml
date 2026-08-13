@@ -1,13 +1,12 @@
 name: Build Android APK
 
 # APK debug de preview. Compila la web (Vite), la sincroniza al proyecto
-# Capacitor y corre gradle assembleDebug en un runner de GitHub (que SI tiene
-# acceso al Android SDK / Maven de Google, a diferencia del entorno de Claude).
-# El APK queda como artifact descargable de la corrida.
+# Capacitor y corre gradle assembleDebug en un runner de GitHub.
 on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - claude/travel-agency-pdf-plan-8qcqwn
 
 jobs:
@@ -51,10 +50,13 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk "android/app/build/outputs/apk/debug/Reservas-Gaby-Tours-2021.apk"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: reservaciones-gaby-tours-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Reservas-Gaby-Tours-2021-APK
+          path: android/app/build/outputs/apk/debug/Reservas-Gaby-Tours-2021.apk
           if-no-files-found: error
           retention-days: 30
