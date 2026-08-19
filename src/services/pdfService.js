@@ -9,8 +9,16 @@ const COLUMNS = [
 ];
 
 const COLUMNS_COMIDA = ['Unidad', 'Grupo', 'Nombre', 'Apellido', 'Desayuno', 'Almuerzo'];
-
 const COLUMNS_TOTALES = ['Plato', 'Cantidad total'];
+
+const GASTOS = [
+  ['Logística', 'gasto_logistica'],
+  ['Transporte Marítimo', 'gasto_transporte_maritimo'],
+  ['Transporte Terrestre', 'gasto_transporte_terrestre'],
+  ['Empleados', 'gasto_empleados'],
+  ['Comidas', 'gasto_comidas'],
+  ['Hidratación', 'gasto_hidratacion'],
+];
 
 function buildRows(pasajeros) {
   return pasajeros.map((p) => [
@@ -56,6 +64,27 @@ function buildRowsTotales(pasajeros) {
   return [...totales.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 }
 
+function calcularFinanzas(viaje, pasajeros) {
+  const ingresosCobrados = pasajeros.reduce((sum, p) => sum + Number(p.monto_reservado), 0);
+  const ingresosPendientes = pasajeros.reduce((sum, p) => sum + Number(p.monto_pendiente), 0);
+  const ingresosProyectados = pasajeros.reduce(
+    (sum, p) => sum + Number(p.servicio_comida ? viaje.precio_pasajero_comida : viaje.precio_pasajero),
+    0,
+  );
+  const gastos = GASTOS.map(([nombre, campo]) => ({ nombre, monto: Number(viaje[campo]) || 0 }));
+  const totalGastos = gastos.reduce((sum, gasto) => sum + gasto.monto, 0);
+
+  return {
+    ingresosCobrados,
+    ingresosPendientes,
+    ingresosProyectados,
+    gastos,
+    totalGastos,
+    gananciaActual: ingresosCobrados - totalGastos,
+    gananciaProyectada: ingresosProyectados - totalGastos,
+  };
+}
+
 export function generarPdfViaje(viaje, pasajeros) {
   const doc = new jsPDF({ orientation: 'landscape' });
   const totalUnidades = pasajeros.length
@@ -64,6 +93,7 @@ export function generarPdfViaje(viaje, pasajeros) {
   const totalReservado = pasajeros.reduce((sum, p) => sum + Number(p.monto_reservado), 0);
   const totalPendiente = pasajeros.reduce((sum, p) => sum + Number(p.monto_pendiente), 0);
   const totalComida = pasajeros.filter((p) => p.servicio_comida).length;
+  const finanzas = calcularFinanzas(viaje, pasajeros);
 
   doc.setFontSize(16);
   doc.text(`Viaje: ${viaje.destino_nombre}`, 14, 16);
@@ -85,11 +115,42 @@ export function generarPdfViaje(viaje, pasajeros) {
   const finalY = doc.lastAutoTable.finalY + 8;
   doc.setFontSize(10);
   doc.text(
-    `Total reservado: ${formatCurrency(totalReservado)}   |   ` +
+    `Total cobrado: ${formatCurrency(totalReservado)}   |   ` +
     `Total pendiente: ${formatCurrency(totalPendiente)}   |   ` +
     `Con servicio de comida: ${totalComida}`,
     14, finalY,
   );
+
+  doc.addPage();
+  doc.setFontSize(16);
+  doc.text(`Informe financiero — ${viaje.destino_nombre}`, 14, 16);
+  doc.setFontSize(10);
+  doc.text(`Fecha: ${formatDate(viaje.fecha)}   |   Pasajeros: ${pasajeros.length}`, 14, 23);
+
+  autoTable(doc, {
+    startY: 30,
+    head: [['Concepto', 'Monto']],
+    body: finanzas.gastos.map((gasto) => [gasto.nombre, formatCurrency(gasto.monto)]),
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [37, 99, 235] },
+    tableWidth: 120,
+  });
+
+  autoTable(doc, {
+    startY: doc.lastAutoTable.finalY + 8,
+    head: [['Resumen financiero', 'Monto']],
+    body: [
+      ['Ingresos cobrados', formatCurrency(finanzas.ingresosCobrados)],
+      ['Ingresos pendientes', formatCurrency(finanzas.ingresosPendientes)],
+      ['Ingresos proyectados', formatCurrency(finanzas.ingresosProyectados)],
+      ['Total de gastos', formatCurrency(finanzas.totalGastos)],
+      ['Ganancia actual', formatCurrency(finanzas.gananciaActual)],
+      ['Ganancia proyectada', formatCurrency(finanzas.gananciaProyectada)],
+    ],
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [37, 99, 235] },
+    tableWidth: 150,
+  });
 
   if (totalComida > 0) {
     doc.addPage();
