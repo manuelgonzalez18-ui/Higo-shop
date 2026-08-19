@@ -39,6 +39,26 @@ export async function crearViaje({
   return data;
 }
 
+export async function actualizarGastosViaje(viajeId, gastos) {
+  const payload = {
+    gasto_logistica: Number(gastos.gasto_logistica) || 0,
+    gasto_transporte_maritimo: Number(gastos.gasto_transporte_maritimo) || 0,
+    gasto_transporte_terrestre: Number(gastos.gasto_transporte_terrestre) || 0,
+    gasto_empleados: Number(gastos.gasto_empleados) || 0,
+    gasto_comidas: Number(gastos.gasto_comidas) || 0,
+    gasto_hidratacion: Number(gastos.gasto_hidratacion) || 0,
+  };
+
+  const { data, error } = await supabase
+    .from('viajes')
+    .update(payload)
+    .eq('id', viajeId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function eliminarViaje(viajeId) {
   const { error } = await supabase.from('viajes').delete().eq('id', viajeId);
   if (error) throw error;
